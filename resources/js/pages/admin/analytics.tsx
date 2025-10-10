@@ -2,17 +2,17 @@ import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import LineChart from '@/admin-pages/Charts/LineChart';
 import BarChart from '@/admin-pages/Charts/BarChart';
-import { admin } from '@/routes';
+import admin from '@/routes/admin';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: admin().url,
+        href: admin.dashboard().url,
     },
     {
         title: 'Analytics',
-        href: admin('analytics').url,
+        href: admin.analytics().url,
     },
 ];
 

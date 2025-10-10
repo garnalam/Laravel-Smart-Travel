@@ -6,13 +6,13 @@ import StatisticsChart from '@/admin-components/ecommerce/StatisticsChart';
 import MonthlyTarget from '@/admin-components/ecommerce/MonthlyTarget';
 import RecentOrders from '@/admin-components/ecommerce/RecentOrders';
 import DemographicCard from '@/admin-components/ecommerce/DemographicCard';
-import { admin } from '@/routes';
+import admin from '@/routes/admin';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin Dashboard',
-        href: admin().url,
+        href: admin.dashboard().url,
     },
 ];
 
