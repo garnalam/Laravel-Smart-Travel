@@ -1,17 +1,17 @@
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
 import BasicTables from '../../admin-pages/Tables/BasicTables';
-import { admin } from '@/routes';
+import admin from '@/routes/admin';
 import { type BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: admin().url,
+        href: admin.dashboard().url,
     },
     {
         title: 'Users Management',
-        href: admin('users').url,
+        href: admin.users().url,
     },
 ];
 
