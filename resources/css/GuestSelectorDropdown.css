@@ -1,0 +1,82 @@
+/* CSS cho toàn bộ wrapper */
+.guest-selector-wrapper {
+    font-family: sans-serif;
+    position: relative; /* Quan trọng để định vị panel con */
+  }
+  
+  /* CSS cho ô bấm vào */
+  .selector-trigger {
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #ff9800; /* Viền màu cam như trong ảnh */
+  }
+  
+  /* CSS cho panel xổ xuống */
+  .guest-counter-panel {
+    position: absolute; /* Hiển thị đè lên trên các component khác */
+    top: 100%; /* Nằm ngay bên dưới ô trigger */
+    left: 0;
+    width: 100%;
+    margin-top: 4px; /* Khoảng cách nhỏ */
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10; /* Đảm bảo nó nổi lên trên */
+    padding: 8px 16px;
+    box-sizing: border-box;
+  }
+  
+  /* Nút "Done" */
+  .done-button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border: none;
+    border-radius: 8px;
+    background-color: #ff9800; /* Màu cam */
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  
+  .done-button:hover {
+    background-color: #e68900;
+  }
+  
+  /* Mũi tên chỉ xuống/lên */
+  .arrow {
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    display: inline-block;
+    padding: 3px;
+  }
+  .arrow.down {
+    transform: rotate(45deg);
+  }
+  .arrow.up {
+    transform: rotate(-135deg);
+  }
+  
+  /* Copy lại CSS cho các hàng counter từ câu trả lời trước */
+  .counter-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+  }
+  /* ... dán phần còn lại của file CSS trước đó vào đây ... */
+  .counter-label { display: flex; flex-direction: column; }
+  .counter-label strong { font-size: 16px; color: #333; }
+  .counter-label span { font-size: 14px; color: #888; }
+  .counter-buttons { display: flex; align-items: center; gap: 16px; }
+  .counter-buttons span { font-size: 16px; font-weight: bold; min-width: 20px; text-align: center; }
+  .counter-buttons button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ccc; background-color: white; color: #555; font-size: 20px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+  .counter-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }

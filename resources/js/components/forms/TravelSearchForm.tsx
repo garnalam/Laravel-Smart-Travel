@@ -1,40 +1,63 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 // import { TravelService } from '@/services/travel.service'
-import { City, TravelSearchParams } from '@/types/domain'
+import { City, DataTour } from '@/types/domain'
 import { Button } from '@/components/ui/Button_dashboard'
-import { Input } from '@/components/ui/Input_dashboard'
-import { Select } from '@/components/ui/Select_dashboard'
 import { Dropdown } from 'primereact/dropdown';
 import { useToast } from '@/hooks/useToast'
-import { getMinDate } from '@/lib/utils'
 import { Calendar } from 'primereact/calendar';
+import { InputNumber } from 'primereact/inputnumber';
+import '../../../css/GuestSelectorDropdown.css'; // File CSS cho dropdown
+import GuestCounter from '@/components/ui/GuestCounter'
+import useOnClickOutside from '../../js/useOnClickOutside'; // Import custom hook
+import { router } from '@inertiajs/react';
 
 export function TravelSearchForm() {
-  const { language } = useAppStore()
+  const { language, currency } = useAppStore()
   const { success, error } = useToast()
-  
+
   const [step, setStep] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [dates, setDates] = useState(null);
-  const [formData, setFormData] = useState<Partial<TravelSearchParams>>({
-    departure: '',
-    destination: '',
-    departureTime: '',
-    departureDate: '',
-    transport: undefined,
-    hotel: '',
-    restaurant: '',
-    recreation: '',
-    days: 1,
-    budget: 0,
-    localTransport: undefined
-  })
-
   const [cities, setCities] = useState<City[]>([])
   const [loadingCities, setLoadingCities] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
+  const guestCounterRef = useRef<HTMLDivElement>(null);
+  const [adults, setAdults] = useState(0);
+  const [children, setChildren] = useState(0);
+  const [infants, setInfants] = useState(0);
+
+  const totalGuests = adults + children;
+
+  const [formData, setFormData] = useState<Partial<DataTour>>({
+    departure: '',
+    destination: '',
+    departureDate: '',
+    arrivalDate: '',
+    budget: 0,
+    adults: 0,
+    children: 0,
+    infants: 0,
+  })
+  useOnClickOutside(guestCounterRef, () => setIsOpen(false));
+
+  const getDisplayText = () => {
+    if (totalGuests === 0 && infants === 0) return "Add guests";
+
+    let parts = [];
+    if (totalGuests > 0) {
+      parts.push(`${totalGuests} ${totalGuests > 1 ? 'guests' : 'guest'}`);
+    }
+    if (infants > 0) {
+      parts.push(`${infants} ${infants > 1 ? 'infants' : 'infant'}`);
+    }
+    formData.adults = adults;
+    formData.children = children;
+    formData.infants = infants;
+    return `${adults} Adults, ${children} Children, ${infants} Infants`;
+  };
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -51,89 +74,40 @@ export function TravelSearchForm() {
     fetchCities()
   }, [])
 
-  const locationOptions = cities.map((city: City) => ({ 
-    value: city.id.toString(), 
-    label: `${city.city}, ${city.country}` 
+  const locationOptions = cities.map((city: City) => ({
+    value: city.city.toString(),
+    label: `${city.city}, ${city.country}`
   }))
 
-  const transportOptions = [
-    { value: '', label: language === 'vi' ? 'Chọn phương tiện' : 'Select Means Of Transport' },
-    { value: 'Plane', label: language === 'vi' ? 'Máy bay' : 'Plane' },
-    { value: 'Tourist Bus', label: language === 'vi' ? 'Xe du lịch' : 'Tourist Bus' },
-    { value: 'Car', label: language === 'vi' ? 'Ô tô' : 'Car' }
-  ]
-
-  const hotelOptions = [
-    { value: '', label: language === 'vi' ? 'Chọn ...' : 'Select ...' },
-    { value: 'hotel1', label: language === 'vi' ? 'Khách sạn 1' : 'Hotel 1' },
-    { value: 'hotel2', label: language === 'vi' ? 'Khách sạn 2' : 'Hotel 2' },
-    { value: 'hotel3', label: language === 'vi' ? 'Khách sạn 3' : 'Hotel 3' }
-  ]
-
-  const restaurantOptions = [
-    { value: '', label: language === 'vi' ? 'Chọn ...' : 'Select ...' },
-    { value: 'restaurant1', label: language === 'vi' ? 'Nhà hàng 1' : 'Restaurant 1' },
-    { value: 'restaurant2', label: language === 'vi' ? 'Nhà hàng 2' : 'Restaurant 2' },
-    { value: 'restaurant3', label: language === 'vi' ? 'Nhà hàng 3' : 'Restaurant 3' }
-  ]
-
-  const recreationOptions = [
-    { value: '', label: language === 'vi' ? 'Chọn ...' : 'Select ...' },
-    { value: 'beach', label: language === 'vi' ? 'Bãi biển' : 'Beach' },
-    { value: 'museum', label: language === 'vi' ? 'Bảo tàng' : 'Museum' },
-    { value: 'park', label: language === 'vi' ? 'Công viên' : 'Park' },
-    { value: 'shopping', label: language === 'vi' ? 'Trung tâm mua sắm' : 'Shopping Mall' }
-  ]
-
-  const localTransportOptions = [
-    { value: '', label: language === 'vi' ? 'Chọn loại xe' : 'Select Vehicle Type' },
-    { value: 'Motorbike', label: language === 'vi' ? 'Xe máy' : 'Motorbike' },
-    { value: 'Taxi', label: language === 'vi' ? 'Taxi' : 'Taxi' },
-    { value: 'Bus', label: language === 'vi' ? 'Xe buýt' : 'Bus' },
-    { value: 'Bicycle', label: language === 'vi' ? 'Xe đạp' : 'Bicycle' }
-  ]
-
-  const handleInputChange = (field: keyof TravelSearchParams) => (e: any) => {
-    const value = e.target.type === 'number' ? Number(e.target.value) : e.target.value
-    setFormData(prev => ({ ...prev, [field]: value }))
-  }
-
-  const handleDropdownChange = (field: keyof TravelSearchParams) => (e: any) => {
+  const handleDropdownChange = (field: keyof DataTour) => (e: any) => {
     setFormData(prev => ({ ...prev, [field]: e.value }))
-  }
-
-  const isStep1Valid = () => {
-    return formData.departure && 
-           formData.destination && 
-           formData.departureTime && 
-           formData.departureDate && 
-           formData.transport
-  }
-
-  const handleContinue = () => {
-    if (isStep1Valid()) {
-      setStep(2)
-    }
-  }
-
-  const handleBack = () => {
-    setStep(1)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!formData.days || !formData.budget) {
+    // Format date thành yyyy-mm-dd để dễ parse
+    const formatDate = (date: Date | string) => {
+      if (!date) return '';
+      const d = new Date(date);
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`; // ISO format yyyy-mm-dd
+    };
+    const departureDate = dates && dates[0] ? formatDate(dates[0]) : '';
+    const arrivalDate = dates && dates[1] ? formatDate(dates[1]) : '';
+    console.log('Departure Date:', departureDate)
+    console.log('Arrival Date:', arrivalDate)
+    if (!formData.departure || !formData.destination || !dates || !formData.budget || !formData.adults || !departureDate || !arrivalDate) {
       error(language === 'vi' ? 'Vui lòng điền đầy đủ thông tin bắt buộc' : 'Please fill all required fields')
       return
     }
-
-    setIsLoading(true)
-
     try {
-      // const result = await TravelService.searchTravel(searchParams)
-      success(language === 'vi' ? 'Tìm kiếm thành công!' : 'Search completed successfully!')
-      // console.log('Search result:', result)
+      formData.departureDate = departureDate
+      formData.arrivalDate = arrivalDate
+      router.post('/tour/flight', formData)
+      success(language === 'vi' ? 'Tìm kiếm chuyến bay thành công!' : 'Flight search completed successfully!')
+      console.log('Search result:', formData)
     } catch (err) {
       error(language === 'vi' ? 'Có lỗi xảy ra khi tìm kiếm' : 'An error occurred during search')
       console.error('Search error:', err)
@@ -143,47 +117,51 @@ export function TravelSearchForm() {
   }
 
   return (
-    <div className="travel-form-container text-gray-800">
-      {step === 1 && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-800">
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                {language === 'vi' ? 'Điểm khởi hành *' : 'Departure *'}
-              </label>
-              <Dropdown
-                value={formData.departure || ''}
-                onChange={handleDropdownChange('departure')}
-                options={locationOptions}
-                optionLabel="label"
-                optionValue="value"
-                placeholder={language === 'vi' ? 'Tìm kiếm điểm khởi hành...' : 'Search departure...'}
-                filter
-                showClear
-                loading={loadingCities}
-                className="w-full"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                {language === 'vi' ? 'Điểm đến *' : 'Destination *'}
-              </label>
-              <Dropdown
-                value={formData.destination || ''}
-                onChange={handleDropdownChange('destination')}
-                options={locationOptions}
-                optionLabel="label"
-                optionValue="value"
-                placeholder={language === 'vi' ? 'Tìm kiếm điểm đến...' : 'Search destination...'}
-                filter
-                showClear
-                loading={loadingCities}
-                className="w-full"
-              />
-            </div>
+    <div className="travel-form-containerS text-gray-800">
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-800">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              {language === 'vi' ? 'Điểm khởi hành *' : 'Departure *'}
+            </label>
+            <Dropdown
+              value={formData.departure || ''}
+              onChange={handleDropdownChange('departure')}
+              options={locationOptions}
+              optionLabel="label"
+              optionValue="value"
+              placeholder={language === 'vi' ? 'Tìm kiếm điểm khởi hành...' : 'Search departure...'}
+              filter
+              showClear
+              loading={loadingCities}
+              className="w-full"
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              {language === 'vi' ? 'Điểm đến *' : 'Destination *'}
+            </label>
+            <Dropdown
+              value={formData.destination || ''}
+              onChange={handleDropdownChange('destination')}
+              options={locationOptions}
+              optionLabel="label"
+              optionValue="value"
+              placeholder={language === 'vi' ? 'Tìm kiếm điểm đến...' : 'Search destination...'}
+              filter
+              showClear
+              loading={loadingCities}
+              className="w-full"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              {language === 'vi' ? 'Ngày khởi hành - Ngày đến' : 'Departure date - Arrival date'}
+            </label>
             <Calendar
               placeholder={language === 'vi' ? 'Ngày khởi hành' : 'Departure date - Arrival date'}
               selectionMode="range"
@@ -193,102 +171,57 @@ export function TravelSearchForm() {
               hideOnRangeSelection
               dateFormat="dd/mm/yy"
               minDate={new Date()}
-               appendTo="self"
-              
+              appendTo="self"
             />
           </div>
-
-          <Select
-            label={language === 'vi' ? 'Phương tiện di chuyển *' : 'Means Of Transport *'}
-            value={formData.transport || ''}
-            onChange={handleInputChange('transport')}
-            options={transportOptions}
-            required
-          />
-
-          <div className="flex justify-end mt-6">
-            <Button 
-              onClick={handleContinue}
-              disabled={!isStep1Valid()}
-            >
-              {language === 'vi' ? 'Tiếp tục' : 'Continue'}
-            </Button>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              {language === 'vi' ? 'Số tiền' : 'Budget'}
+            </label>
+            <InputNumber
+              placeholder={language === 'vi' ? 'Số tiền' : 'Budget'}
+              onChange={(e) => setFormData(prev => ({ ...prev, budget: e.value || 0 }))}
+              max={100000}
+              min={0}
+              mode="currency"
+              currency={currency}
+            />
           </div>
         </div>
-      )}
-
-      {step === 2 && (
-        <form onSubmit={handleSubmit}>
-          <div className="trip-info-section">
-            <h3 className="text-xl font-bold text-gray-800 mb-6">
-              {language === 'vi' ? 'Thông tin chuyến đi tại điểm đến' : 'Trip Information at Destination'}
-            </h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Select
-                label={language === 'vi' ? 'Khách sạn' : 'Hotel'}
-                value={formData.hotel || ''}
-                onChange={handleInputChange('hotel')}
-                options={hotelOptions}
-              />
-              <Select
-                label={language === 'vi' ? 'Nhà hàng' : 'Restaurant'}
-                value={formData.restaurant || ''}
-                onChange={handleInputChange('restaurant')}
-                options={restaurantOptions}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Select
-                label={language === 'vi' ? 'Địa điểm giải trí' : 'Recreation Places'}
-                value={formData.recreation || ''}
-                onChange={handleInputChange('recreation')}
-                options={recreationOptions}
-              />
-              <Input
-                label={language === 'vi' ? 'Số ngày *' : 'Number of Days *'}
-                type="number"
-                min="1"
-                value={formData.days || ''}
-                onChange={handleInputChange('days')}
-                placeholder="3"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <Input
-                label={language === 'vi' ? 'Ngân sách (USD) *' : 'Budget (USD) *'}
-                type="number"
-                min="0"
-                value={formData.budget || ''}
-                onChange={handleInputChange('budget')}
-                placeholder="500"
-                required
-              />
-            </div>
-
-            <div className="mb-6">
-              <Select
-                label={language === 'vi' ? 'Phương tiện giao thông địa phương' : 'Local Means Of Transportation'}
-                value={formData.localTransport || ''}
-                onChange={handleInputChange('localTransport')}
-                options={localTransportOptions}
-              />
-            </div>
-
-            <div className="flex justify-between">
-              <Button type="button" variant="outline" onClick={handleBack}>
-                {language === 'vi' ? 'Quay lại' : 'Back'}
-              </Button>
-              <Button type="submit" isLoading={isLoading}>
-                {language === 'vi' ? 'Tìm kiếm' : 'Search'}
-              </Button>
+        
+        <div className="grid grid-cols-1 gap-4 w-full">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">
+              {language === 'vi' ? 'Số lượng người' : 'Number of Passengers'}
+            </label>
+            <div className="guest-selector-wrapper" ref={guestCounterRef}>
+              <div className="selector-trigger" onClick={() => setIsOpen(!isOpen)}>
+                <span>{getDisplayText()}</span>
+                <span className={`arrow ${isOpen ? 'up' : 'down'}`}></span>
+              </div>
+              {isOpen && (
+                <GuestCounter
+                  adults={adults}
+                  setAdults={setAdults}
+                  children={children}
+                  setChildren={setChildren}
+                  infants={infants}
+                  setInfants={setInfants}
+                  onDone={() => setIsOpen(false)}
+                />
+              )}
             </div>
           </div>
-        </form>
-      )}
+        </div>
+
+        <div className="flex justify-end mt-6">
+          <Button
+            onClick={handleSubmit}
+          >
+            {language === 'vi' ? 'Tiếp tục' : 'Continue'}
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

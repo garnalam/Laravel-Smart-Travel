@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { admin } from '@/routes';
+import admin from '@/routes/admin';
 import { type BreadcrumbItem } from '@/types';
 import UserMetaCard from '@/admin-components/UserProfile/UserMetaCard';
 import UserInfoCard from '@/admin-components/UserProfile/UserInfoCard';
@@ -10,12 +10,12 @@ import { ProfileProvider } from '@/admin-context/ProfileContext';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: admin().url,
+        href: admin.dashboard().url,
     },
-    {
-        title: 'User Profile',
-        href: admin('profile').url,
-    },
+    // {
+    //     title: 'User Profile',
+    //     href: admin.profile().url,
+    // },
 ];
 
 export default function UserProfile() {

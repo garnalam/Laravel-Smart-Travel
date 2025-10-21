@@ -15,9 +15,9 @@ class CityController extends Controller
     public function getAllCities()
     {
         // Use DB facade directly with MongoDB connection
-        $limit = request()->get('limit', 10);
+        $limit = request()->get('limit' );
         $cities = \Illuminate\Support\Facades\DB::connection('mongodb')
-            ->table('world_cities')
+            ->table('worldcities')
             ->limit($limit)
             ->get();
         return response()->json($cities);
