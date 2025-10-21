@@ -113,8 +113,15 @@ return [
         ],
         'mongodb' => [
             'driver' => 'mongodb',
-            'dsn' => env('MONGODB_DSN'),
-            'database' => env('DB_DATABASE', 'smart_travel'),
+            'dsn' => env('DB_MONGODB_DSN', env('MONGODB_DSN')),
+            'host' => env('MONGODB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('MONGODB_PORT', env('DB_PORT', 27017)),
+            'database' => env('MONGODB_DATABASE', env('DB_DATABASE', 'smart_travel')),
+            'username' => env('MONGODB_USERNAME', env('DB_USERNAME')),
+            'password' => env('MONGODB_PASSWORD', env('DB_PASSWORD')),
+            'options' => [
+                'appname' => env('APP_NAME', 'laravel'),
+            ],
         ],
 
     ],

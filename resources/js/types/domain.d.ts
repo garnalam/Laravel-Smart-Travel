@@ -14,18 +14,18 @@ export interface City {
   country: string
 }
 
-export interface TravelSearchParams {
+export interface DataTour {
   departure: string
   destination: string
-  departureTime: string
   departureDate: string
-  transport: 'Plane' | 'Tourist Bus' | 'Car'
-  hotel?: string
-  restaurant?: string
-  recreation?: string
+  arrivalDate: string
   days: number
+  moneyFlight: number
+  passengers: number
   budget: number
-  localTransport?: 'Motorbike' | 'Taxi' | 'Bus' | 'Bicycle'
+  adults: number
+  children: number
+  infants: number
 }
 
 export interface HotelSearchParams {

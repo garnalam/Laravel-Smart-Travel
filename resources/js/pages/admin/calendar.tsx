@@ -1,6 +1,6 @@
 import { Head } from '@inertiajs/react';
 import AdminLayout from '@/layouts/admin-layout';
-import { admin } from '@/routes';
+import admin from '@/routes/admin';
 import { type BreadcrumbItem } from '@/types';
 import { useState, useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
@@ -12,12 +12,12 @@ import { EventInput, DateSelectArg, EventClickArg } from "@fullcalendar/core";
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Admin',
-        href: admin().url,
+        href: admin.dashboard().url,
     },
-    {
-        title: 'Calendar',
-        href: admin('calendar').url,
-    },
+    // {
+    //     title: 'Calendar',
+    //     href: admin('calendar').url,
+    // },
 ];
 
 interface CalendarEvent extends EventInput {
