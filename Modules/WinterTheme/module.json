@@ -1,0 +1,11 @@
+{
+    "name": "WinterTheme",
+    "alias": "wintertheme",
+    "description": "",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\WinterTheme\\Providers\\WinterThemeServiceProvider"
+    ],
+    "files": []
+}

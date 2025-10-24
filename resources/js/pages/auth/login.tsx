@@ -10,6 +10,7 @@ import { register } from '@/routes';
 import { request } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { useLocalization } from '@/lib/localization'; // Import hook dịch thuật
 
 interface LoginProps {
     status?: string;
@@ -17,12 +18,14 @@ interface LoginProps {
 }
 
 export default function Login({ status, canResetPassword }: LoginProps) {
+    const __ = useLocalization(); // Khởi tạo hook dịch thuật
+
     return (
         <AuthLayout
-            title="Chào mừng trở lại Smart Travel"
-            description="Đăng nhập để tiếp tục dựng hành trình, đặt vé máy bay và đồng bộ lịch trình cá nhân hóa."
+            title={__('login.welcome_back')}
+            description={__('login.welcome_description')}
         >
-            <Head title="Log in" />
+            <Head title={__('login.meta_title')} />
 
             <Form
                 {...AuthenticatedSessionController.store.form()}
@@ -35,17 +38,17 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             <div className="rounded-3xl border border-white/15 bg-[rgba(10,25,33,0.9)] p-6 backdrop-blur-2xl shadow-[0_32px_110px_-60px_rgba(0,0,0,0.75)]">
                                 <div className="mb-6 space-y-2 text-center">
                                     <h2 className="text-lg font-semibold text-white drop-shadow-[0_18px_32px_rgba(0,0,0,0.4)]">
-                                        Đăng nhập để tiếp tục hành trình
+                                        {__('login.form.title')}
                                     </h2>
                                     <p className="text-sm text-[#D0D7D8]">
-                                        Smart Travel sẽ đồng bộ vé máy bay, khách sạn và timeline từng ngày của bạn.
+                                        {__('login.form.description')}
                                     </p>
                                 </div>
 
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
                                         <Label htmlFor="email" className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                            Email
+                                            {__('login.form.email_label')}
                                         </Label>
                                         <div className="relative">
                                             <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/20 opacity-65" />
@@ -57,7 +60,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                                 autoFocus
                                                 tabIndex={1}
                                                 autoComplete="email"
-                                                placeholder="smarttravel@email.com"
+                                                placeholder={__('login.form.email_placeholder')}
                                                 className="h-12 rounded-2xl border border-white/20 bg-[rgba(7,18,26,0.92)] text-white placeholder:text-[#B6C2C6] focus-visible:border-[#FFE5B4] focus-visible:ring-0"
                                             />
                                         </div>
@@ -67,7 +70,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     <div className="grid gap-2">
                                         <div className="flex items-center">
                                             <Label htmlFor="password" className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                                Mật khẩu
+                                                {__('login.form.password_label')}
                                             </Label>
                                             {canResetPassword && (
                                                 <TextLink
@@ -75,7 +78,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                                     className="ml-auto text-xs text-[#7EE0FF] transition hover:text-[#FFE5B4]"
                                                     tabIndex={5}
                                                 >
-                                                    Quên mật khẩu?
+                                                    {__('login.form.forgot_password')}
                                                 </TextLink>
                                             )}
                                         </div>
@@ -103,7 +106,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             className="border-[#FFE5B4]/70 text-[#FFE5B4]"
                                         />
                                         <Label htmlFor="remember" className="text-sm text-[#D0D7D8]">
-                                            Ghi nhớ thiết bị này
+                                            {__('login.form.remember_me')}
                                         </Label>
                                     </div>
 
@@ -125,7 +128,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                             {processing && (
                                                 <LoaderCircle className="h-4 w-4 animate-spin text-[#2B1200]" />
                                             )}
-                                            Đăng nhập
+                                            {__('login.form.submit_button')}
                                         </span>
                                     </Button>
                                 </div>
@@ -133,17 +136,17 @@ export default function Login({ status, canResetPassword }: LoginProps) {
 
                             <div className="rounded-3xl border border-white/15 bg-[rgba(8,23,31,0.75)] p-6 text-center text-sm text-[#D0D7D8] backdrop-blur-2xl shadow-[0_28px_90px_-55px_rgba(0,0,0,0.62)]">
                                 <p className="mb-3 text-xs uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                    Tạo tài khoản mới
+                                    {__('login.register.prompt_title')}
                                 </p>
                                 <p className="mb-4 text-sm">
-                                    Lần đầu sử dụng Smart Travel? Hãy tạo hồ sơ để nhận gợi ý vé bay, khách sạn và lịch trình chi tiết.
+                                    {__('login.register.prompt_description')}
                                 </p>
                                 <TextLink
                                     href={register()}
                                     tabIndex={5}
                                     className="inline-flex items-center gap-2 text-sm text-[#7EE0FF] transition hover:text-[#FFE5B4]"
                                 >
-                                    Tạo tài khoản Smart Travel
+                                    {__('login.register.cta_button')}
                                     <span aria-hidden>→</span>
                                 </TextLink>
                             </div>
