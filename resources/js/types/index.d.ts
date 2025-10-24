@@ -2,7 +2,8 @@ import { InertiaLinkProps } from '@inertiajs/react';
 import { LucideIcon } from 'lucide-react';
 
 export interface Auth {
-    user: User;
+    // Người dùng có thể là null nếu chưa đăng nhập
+    user: User | null;
 }
 
 export interface BreadcrumbItem {
@@ -27,6 +28,8 @@ export interface SharedData {
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
+    // THAY ĐỔI QUAN TRỌNG: Thay thế hàm `__` bằng object chứa các bản dịch
+    translations: Record<string, string>;
     [key: string]: unknown;
 }
 
@@ -41,3 +44,4 @@ export interface User {
     updated_at: string;
     [key: string]: unknown; // This allows for additional properties...
 }
+

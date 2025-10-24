@@ -1,0 +1,33 @@
+/**
+ * CSS cho theme $STUDLY_NAME$
+ *
+ * Sử dụng selector attribute này để áp dụng style
+ * chỉ cho theme của bạn.
+ */
+
+[data-theme="$LOWER_NAME$"] .themeable-container {
+  /* Bắt đầu trang trí ngôi nhà của bạn ở đây! */
+  background-color: #f0f0f0; /* Ví dụ: đổi màu nền */
+}
+
+[data-theme="$LOWER_NAME$"] .themeable-header {
+  order: 1; /* Ví dụ: Giữ header ở trên cùng */
+  background-color: #333;
+  color: white;
+}
+
+[data-theme="$LOWER_NAME$"] .themeable-sidebar {
+  order: 2;
+  width: 25%;
+  background-color: #e9e9e9;
+}
+
+[data-theme="$LOWER_NAME$"] .themeable-content {
+  order: 3;
+  width: 75%;
+}
+
+[data-theme="$LOWER_NAME$"] .themeable-footer {
+  order: 4;
+  width: 100%;
+}

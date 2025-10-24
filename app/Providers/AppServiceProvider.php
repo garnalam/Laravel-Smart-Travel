@@ -3,7 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-
+use App\Models\Language;
+use App\Observers\LanguageObserver;
+use App\Models\Theme;
+use App\Observers\ThemeObserver;
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -19,6 +22,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Language::observe(LanguageObserver::class);
+
+
     }
 }

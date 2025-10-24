@@ -1,22 +1,25 @@
-import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
-import { login } from '@/routes';
+import RegisteredUserController from '../../actions/App/Http/Controllers/Auth/RegisteredUserController';
+import { login } from '../../routes';
 import { Form, Head } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
+import { useLocalization } from '../../lib/localization'; // Import hook dịch thuật
 
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import AuthLayout from '@/layouts/auth-layout';
+import InputError from '../../components/input-error';
+import TextLink from '../../components/text-link';
+import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Label } from '../../components/ui/label';
+import AuthLayout from '../../layouts/auth-layout';
 
 export default function Register() {
+    const __ = useLocalization(); // Khởi tạo hook dịch thuật
+
     return (
         <AuthLayout
-            title="Tạo tài khoản Smart Travel"
-            description="Chỉ vài bước để trải nghiệm Smart Travel cùng chúng tôi."
+            title={__('register.create_account')}
+            description={__('register.experience_intro')}
         >
-            <Head title="Register" />
+            <Head title={__('register.meta_title')} />
             <Form
                 {...RegisteredUserController.store.form()}
                 resetOnSuccess={['password', 'password_confirmation']}
@@ -29,17 +32,17 @@ export default function Register() {
                             <div className="rounded-3xl border border-white/15 bg-[rgba(10,25,33,0.9)] p-6 backdrop-blur-2xl shadow-[0_32px_110px_-60px_rgba(0,0,0,0.75)]">
                                 <div className="mb-6 space-y-2 text-center">
                                     <h2 className="text-lg font-semibold text-white drop-shadow-[0_18px_32px_rgba(0,0,0,0.4)]">
-                                        Hoàn thiện hồ sơ Smart Travel của bạn
+                                        {__('register.form.title')}
                                     </h2>
                                     <p className="text-sm text-[#D0D7D8]">
-                                        Tạo tài khoản để đồng bộ vé máy bay, lưu trữ địa điểm yêu thích và nhận lộ trình tối ưu hóa theo ngày.
+                                        {__('register.form.description')}
                                     </p>
                                 </div>
 
                                 <div className="grid gap-5">
                                     <div className="grid gap-2">
                                         <Label htmlFor="name" className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                            Họ tên
+                                            {__('register.form.name_label')}
                                         </Label>
                                         <div className="relative">
                                             <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/20 opacity-65" />
@@ -51,7 +54,7 @@ export default function Register() {
                                                 tabIndex={1}
                                                 autoComplete="name"
                                                 name="name"
-                                                placeholder="Nguyễn Văn A"
+                                                placeholder={__('register.form.name_placeholder')}
                                                 className="h-12 rounded-2xl border border-white/20 bg-[rgba(7,18,26,0.92)] text-white placeholder:text-[#B6C2C6] focus-visible:border-[#FFE5B4] focus-visible:ring-0"
                                             />
                                         </div>
@@ -63,7 +66,7 @@ export default function Register() {
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="email" className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                            Email
+                                            {__('register.form.email_label')}
                                         </Label>
                                         <div className="relative">
                                             <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/20 opacity-65" />
@@ -74,7 +77,7 @@ export default function Register() {
                                                 tabIndex={2}
                                                 autoComplete="email"
                                                 name="email"
-                                                placeholder="smarttravel@email.com"
+                                                placeholder={__('register.form.email_placeholder')}
                                                 className="h-12 rounded-2xl border border-white/20 bg-[rgba(7,18,26,0.92)] text-white placeholder:text-[#B6C2C6] focus-visible:border-[#FFE5B4] focus-visible:ring-0"
                                             />
                                         </div>
@@ -83,7 +86,7 @@ export default function Register() {
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="password" className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                            Mật khẩu
+                                            {__('register.form.password_label')}
                                         </Label>
                                         <div className="relative">
                                             <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/20 opacity-65" />
@@ -106,10 +109,10 @@ export default function Register() {
                                             htmlFor="password_confirmation"
                                             className="text-sm uppercase tracking-[0.25em] text-[#FFE5B4]"
                                         >
-                                            Xác nhận mật khẩu
+                                            {__('register.form.password_confirmation_label')}
                                         </Label>
                                         <div className="relative">
-                                            <div className="pointer-events-none.absolute inset-0 rounded-2xl border border-white/10 opacity-40" />
+                                            <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/10 opacity-40" />
                                             <Input
                                                 id="password_confirmation"
                                                 type="password"
@@ -134,7 +137,7 @@ export default function Register() {
                                     >
                                         <span
                                             aria-hidden="true"
-                                            className="pointer-events-none absolute inset-0.opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                                            className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
                                         >
                                             <span className="absolute inset-0 bg-[radial-gradient(circle_at_15%_50%,rgba(255,255,255,0.65),transparent_55%),radial-gradient(circle_at_85%_45%,rgba(255,255,255,0.5),transparent_60%)] mix-blend-screen" />
                                             <span className="absolute left-[-40%] top-1/2 h-[220%] w-[65%] -translate-y-1/2 rotate-[18deg] bg-white/70 blur-[60px] opacity-50" />
@@ -143,7 +146,7 @@ export default function Register() {
                                             {processing && (
                                                 <LoaderCircle className="h-4 w-4 animate-spin text-[#2B1200]" />
                                             )}
-                                            Tạo tài khoản
+                                            {__('register.form.submit_button')}
                                         </span>
                                     </Button>
                                 </div>
@@ -151,17 +154,17 @@ export default function Register() {
 
                             <div className="rounded-3xl border border-white/15 bg-[rgba(8,23,31,0.75)] p-6 text-center text-sm text-[#D0D7D8] backdrop-blur-2xl shadow-[0_28px_90px_-55px_rgba(0,0,0,0.62)]">
                                 <p className="mb-3 text-xs uppercase tracking-[0.25em] text-[#FFE5B4]">
-                                    Đã có tài khoản?
+                                    {__('register.login.prompt_title')}
                                 </p>
                                 <p className="mb-4 text-sm">
-                                    Đăng nhập để tiếp tục hành trình đã lưu, cập nhật vé bay và đồng bộ timeline từng ngày.
+                                    {__('register.login.prompt_description')}
                                 </p>
                                 <TextLink
                                     href={login()}
                                     tabIndex={6}
                                     className="inline-flex items-center gap-2 text-sm text-[#7EE0FF] transition hover:text-[#FFE5B4]"
                                 >
-                                    Quay lại đăng nhập
+                                    {__('register.login.cta_button')}
                                     <span aria-hidden>→</span>
                                 </TextLink>
                             </div>
@@ -172,3 +175,4 @@ export default function Register() {
         </AuthLayout>
     );
 }
+
