@@ -10,7 +10,7 @@ export default defineConfig({
             input: [
                 'resources/css/app.css',
                 'resources/js/app.tsx',
-                'resources/js/routes/admin.ts'
+                'resources/js/routes/admin/index.ts'
             ],
             ssr: 'resources/js/ssr.tsx',
             refresh: true,
