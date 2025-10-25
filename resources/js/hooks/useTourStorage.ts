@@ -4,6 +4,7 @@ const TOUR_STORAGE_KEY = 'smart_travel_tour_data';
 
 export interface TourStorageData {
   // Flight booking data
+  city_id?: string;
   departure?: string;
   destination?: string;
   departureDate?: string;
@@ -98,8 +99,6 @@ export const useTourStorage = () => {
       
       localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(updatedData));
       setTourData(updatedData);
-      
-      console.log('Tour data saved to localStorage:', updatedData);
       return updatedData;
     } catch (error) {
       console.error('Error saving tour data to localStorage:', error);
@@ -160,6 +159,7 @@ export const useTourStorage = () => {
    * Save flight booking data
    */
   const saveFlightData = (data: {
+    city_id?: string;
     departure: string;
     destination: string;
     departureDate: string;

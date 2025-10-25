@@ -5,10 +5,14 @@ namespace App\Http\Controllers\Tour;
 use App\Http\Controllers\Controller;
 use App\Models\City;
 use App\Models\Place;
+use App\Models\tour_user;
+use App\Models\Payment;
+use App\Models\User_preferences;
 use App\Services\PythonApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class TourController extends Controller
 {
@@ -113,9 +117,16 @@ class TourController extends Controller
      */
     protected function preparePreferences(array $validated): array
     {
-        // Get destination city ID from database
-        $destination = $validated['destination'] ?? $validated['city'] ?? 'Bangkok'; // Fallback
-        $destinationCityId = $this->getCityId($destination);
+        // Get destination city ID - use city_id from frontend if available, otherwise query database
+        if (!empty($validated['city_id'])) {
+            $destinationCityId = $validated['city_id'];
+            Log::info("Using city_id from frontend", ['city_id' => $destinationCityId]);
+        } else {
+            // Fallback: Get destination city ID from database
+            $destination = $validated['destination'] ?? $validated['city'] ?? 'Bangkok'; // Fallback
+            $destinationCityId = $this->getCityId($destination);
+            Log::info("Queried city_id from database", ['city_id' => $destinationCityId]);
+        }
         
         // Calculate budget (subtract flight cost if provided)
         $totalBudget = (float)($validated['budget'] ?? 1000);
@@ -526,6 +537,250 @@ class TourController extends Controller
         return Inertia::render('tour/FinalTour', [
             'tourData' => $finalTour,
         ]);
+    }
+
+    public function saveTourData(Request $request)
+    {
+        $validated = $request->validate([
+            'departure' => 'required|string',
+            'days' => 'required|integer',
+            'passengers' => 'required|integer',
+            'days_cost' => 'required|array',
+            'total_cost' => 'required|numeric',
+            'flight_cost' => 'required|numeric',
+            'start_date' => 'required|string',
+            'flights' => 'required|array',
+            'flights.selectedDepartureFlight' => 'required|array',
+            'flights.selectedReturnFlight' => 'required|array',
+            'itinerary' => 'required|array',
+            'itinerary.*.day' => 'required|integer',
+            'itinerary.*.date' => 'required|string',
+            'itinerary.*.completed' => 'required|boolean',
+            'itinerary.*.totalCost' => 'required|numeric',
+            'itinerary.*.activities_id' => 'nullable|array',
+            'itinerary.*.restaurants_id' => 'nullable|array',
+            'itinerary.*.hotel_id' => 'nullable|array',
+            'itinerary.*.transportation_mode' => 'nullable|array',
+            'schedules' => 'required|array',
+            'schedules.*.day' => 'required|integer',
+            'schedules.*.totalCost' => 'required|numeric',
+            'schedules.*.items' => 'required|array',
+            'schedules.*.items.*.id' => 'required',
+            'schedules.*.items.*.place_id' => 'nullable|string',
+            'schedules.*.items.*.type' => 'required|string',
+            'schedules.*.items.*.startTime' => 'required|string',
+            'schedules.*.items.*.endTime' => 'required|string',
+            'schedules.*.items.*.title' => 'required|string',
+            'schedules.*.items.*.cost' => 'required|numeric',
+            'schedules.*.items.*.transport_mode' => 'nullable|string',
+        ]);
+
+        // Generate tour ID
+        $tourId = (string) \Illuminate\Support\Str::uuid();
+        
+        // Create tour data using mass assignment
+        $tourData = tour_user::create([
+            'user_id' => auth()->id(),
+            'tour_id' => $tourId,
+            'duration_days' => $validated['days'],
+            'start_date' => $validated['start_date'],
+            'user_preferences' => [
+                'departure' => $validated['departure'],
+                'days' => $validated['days'],
+                'passengers' => $validated['passengers'],
+                'days_cost' => $validated['days_cost'],
+                'total_cost' => $validated['total_cost'],
+                'flight_cost' => $validated['flight_cost']
+            ],
+            'itinerary' => $validated['itinerary'],
+            'flights' => $validated['flights'],
+            'schedules' => $validated['schedules'],
+        ]);
+        
+        $saved = $tourData ? true : false;
+        
+        // Log for debugging
+        Log::info('Tour data saved', [
+            'saved' => $saved,
+            'tour_id' => $tourData->tour_id,
+            'user_id' => $tourData->user_id,
+            '_id' => $tourData->_id ?? null
+        ]);
+
+        // Redirect to payment page with tour data
+        return Inertia::render('tour/payment', [
+            'tourData' => array_merge($validated, [
+                'tour_id' => $tourData->tour_id,
+                '_id' => $tourData->_id ?? null
+            ]),
+            'tour_id' => $tourData->tour_id
+        ]);
+    }
+
+    public function paymentTour(Request $request)
+    {
+        $validated = $request->validate([
+            'tour_id' => 'required|string',
+            'fullName' => 'required|string',
+            'email' => 'required|email',
+            'phone' => 'required|string',
+            'address' => 'required|string',
+        ]);
+
+        $paymentData = new Payment();
+        $paymentData->user_id = auth()->id();
+        $paymentData->tour_id = $validated['tour_id'];
+        $paymentData->fullName = $validated['fullName'];
+        $paymentData->email = $validated['email'];
+        $paymentData->phone = $validated['phone'];
+        $paymentData->address = $validated['address'];
+        $paymentData->status = 'paid';
+        $paymentData->save();
+
+        // Get tour data from database using tour_id
+        $tourData = tour_user::where('tour_id', $validated['tour_id'])->first();
+
+        // Redirect to success page with payment and tour data
+        return Inertia::render('tour/success', [
+            'paymentData' => $paymentData,
+            'tourData' => $tourData ? [
+                'departure' => $tourData->user_preferences['departure'] ?? null,
+                'destination' => $tourData->destination ?? null,
+                'days' => $tourData->user_preferences['days'] ?? count($tourData->itinerary ?? []),
+                'passengers' => $tourData->user_preferences['passengers'] ?? null,
+                'total_cost' => $tourData->user_preferences['total_cost'] ?? 0,
+                'flight_cost' => $tourData->user_preferences['flight_cost'] ?? 0,
+                'days_cost' => $tourData->user_preferences['days_cost'] ?? [],
+                'start_date' => $tourData->start_date ?? null,
+            ] : null,
+        ]);
+    }
+    public function downloadItinerary()
+    {
+        $finalTour = session('final_tour', null);
+        
+        if (!$finalTour) {
+            return redirect()->back()->with('error', 'No tour data found');
+        }
+    
+        $pdf = Pdf::loadView('pdf.tour-itinerary', [
+            'tourData' => $finalTour
+        ]);
+        
+        $filename = 'tour-itinerary-' . date('Y-m-d') . '.pdf';
+        
+        return $pdf->download($filename);
+    }
+    
+    /**
+     * Download payment receipt as PDF
+     */
+    public function downloadReceipt(Request $request)
+    {
+        $paymentId = $request->input('payment_id');
+        
+        if (!$paymentId) {
+            return redirect()->back()->with('error', 'Payment ID not found');
+        }
+    
+        // Get payment data
+        $paymentData = Payment::find($paymentId);
+        
+        if (!$paymentData) {
+            return redirect()->back()->with('error', 'Payment not found');
+        }
+    
+        // Get tour data
+        $tourData = tour_user::where('tour_id', $paymentData->tour_id)->first();
+        
+        $pdf = Pdf::loadView('pdf.payment-receipt', [
+            'paymentData' => $paymentData,
+            'tourData' => $tourData ? [
+                'departure' => $tourData->user_preferences['departure'] ?? null,
+                'destination' => $tourData->destination ?? null,
+                'days' => $tourData->user_preferences['days'] ?? count($tourData->itinerary ?? []),
+                'passengers' => $tourData->user_preferences['passengers'] ?? null,
+                'total_cost' => $tourData->user_preferences['total_cost'] ?? 0,
+                'flight_cost' => $tourData->user_preferences['flight_cost'] ?? 0,
+                'schedules' => $tourData->schedules ?? [],
+                'start_date' => $tourData->start_date ?? null,
+            ] : null,
+        ]);
+        
+        $filename = 'receipt-' . $paymentData->id . '.pdf';
+        
+        return $pdf->download($filename);
+    }
+
+    public function saveUserPreferences(Request $request)
+    {
+        // Check if user is authenticated
+        if (!auth()->check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not authenticated',
+            ], 401);
+        }
+
+        $validated = $request->validate([
+            'city_id' => 'nullable|string',
+            'city_name' => 'nullable|string',
+            'liked_restaurants' => 'nullable|array',
+            'disliked_restaurants' => 'nullable|array',
+            'liked_hotels' => 'nullable|array',
+            'disliked_hotels' => 'nullable|array',
+            'liked_activities' => 'nullable|array',
+            'disliked_activities' => 'nullable|array',
+            'liked_transport' => 'nullable|array',
+            'disliked_transport' => 'nullable|array',
+        ]);
+        
+        $userId = auth()->id();
+        
+        // Xác định identifier để tìm preference (ưu tiên city_id, fallback city_name)
+        $cityIdentifier = $validated['city_id'] ?? $validated['city_name'] ?? null;
+        $cityIdField = $validated['city_id'] ? 'city_id' : 'city_name';
+        
+        if (!$cityIdentifier) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Either city_id or city_name is required',
+            ], 400);
+        }
+        
+        // Update hoặc create preferences
+        $userPreferences = User_preferences::updateOrCreate(
+            [
+                'user_id' => $userId,
+                $cityIdField => $cityIdentifier,
+            ],
+            [
+                'city_id' => $validated['city_id'] ?? null,
+                'city_name' => $validated['city_name'] ?? null,
+                'liked_restaurants' => $validated['liked_restaurants'] ?? [],
+                'disliked_restaurants' => $validated['disliked_restaurants'] ?? [],
+                'liked_hotels' => $validated['liked_hotels'] ?? [],
+                'disliked_hotels' => $validated['disliked_hotels'] ?? [],
+                'liked_activities' => $validated['liked_activities'] ?? [],
+                'disliked_activities' => $validated['disliked_activities'] ?? [],
+                'liked_transport' => $validated['liked_transport'] ?? [],
+                'disliked_transport' => $validated['disliked_transport'] ?? [],
+            ]
+        );
+
+        Log::info('User preferences saved', [
+            'user_id' => $userId,
+            'city_id' => $validated['city_id'] ?? null,
+            'city_name' => $validated['city_name'] ?? null,
+            'liked_restaurants_count' => count($validated['liked_restaurants'] ?? []),
+            'disliked_restaurants_count' => count($validated['disliked_restaurants'] ?? []),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User preferences saved successfully',
+            'data' => $userPreferences,
+        ], 200);
     }
 }
 

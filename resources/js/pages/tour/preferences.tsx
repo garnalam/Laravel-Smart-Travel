@@ -48,24 +48,6 @@ interface CategorySection {
 export default function Preferences() {
   const { props, url } = usePage<{ tourData?: Partial<DataTour> }>()
   const [isLoading, setIsLoading] = useState(true);
-  const [placesData, setPlacesData] = useState<PlacesData>({
-    currentDay: 0,
-    budget: 0,
-    passengers: 0,
-    restaurants: [],
-    hotels: [],
-    activities: [],
-    transport: [],
-    liked_restaurants: [],
-    disliked_restaurants: [],
-    liked_hotels: [],
-    disliked_hotels: [],
-    liked_activities: [],
-    disliked_activities: [],
-    liked_transport: [],
-    disliked_transport: [],
-  });
-
 
   const { 
     tourData: storedTourData, 
@@ -77,6 +59,7 @@ export default function Preferences() {
   } = useTourStorage();
   
   const [formData, setFormData] = useState<Partial<DataTour>>({
+    city_id: '',
     departure: '',
     destination: '',
     budget: 0,
@@ -110,17 +93,12 @@ export default function Preferences() {
   
   // Load data from props or localStorage and set current day from URL
   useEffect(() => {
-    console.log('=== Preferences Loading Data ===');
-    console.log('Props received:', props.tourData);
-    console.log('Stored tour data:', storedTourData);
-    console.log('Current URL:', url);
-    
     // Priority: props.tourData > localStorage > default
     let dataToLoad: Partial<DataTour> = {};
-    
     if (props.tourData && Object.keys(props.tourData).length > 0) {
       // Use props data (from backend)
       dataToLoad = {
+        city_id: props.tourData.city_id || '',
         budget: props.tourData.budget || 0,
         passengers: props.tourData.passengers || 0,
         days: props.tourData.days || 0,
@@ -128,10 +106,10 @@ export default function Preferences() {
         departure: props.tourData.departure || '',
         destination: props.tourData.destination || '',
       };
-      console.log('✅ Loading from props:', dataToLoad);
     } else if (storedTourData) {
       // Use localStorage data
       dataToLoad = {
+        city_id: storedTourData.city_id || '',
         budget: storedTourData.budget || 0,
         passengers: storedTourData.passengers || 0,
         days: storedTourData.days || 0,
@@ -139,7 +117,6 @@ export default function Preferences() {
         departure: storedTourData.departure || '',
         destination: storedTourData.destination || '',
       };
-      console.log('✅ Loading from localStorage:', dataToLoad);
     } else {
       console.log('⚠️ No data available in props or localStorage');
     }
@@ -150,7 +127,6 @@ export default function Preferences() {
       // ALWAYS check URL query parameter when this effect runs
       const queryDay = getQueryDay();
       if (queryDay) {
-        console.log(`✅ Day from URL query parameter: ${queryDay}`);
         if (queryDay !== currentDay) {
           console.log(`🔄 Updating currentDay from ${currentDay} to ${queryDay}`);
           setCurrentDay(queryDay);
@@ -159,10 +135,6 @@ export default function Preferences() {
         // Calculate current day by reading fresh data from localStorage
         const freshDaySchedules = getAllDaySchedules();
         const totalDays = dataToLoad.days || 0;
-        
-        console.log('Fresh day schedules from localStorage:', freshDaySchedules);
-        console.log('Total days:', totalDays);
-        
         // Find first day without schedule
         let nextDay = 1;
         for (let i = 1; i <= totalDays; i++) {
@@ -174,8 +146,6 @@ export default function Preferences() {
             nextDay = totalDays;
           }
         }
-        
-        console.log(`✅ Calculated current day: ${nextDay} (out of ${totalDays} days)`);
         if (nextDay !== currentDay) {
           setCurrentDay(nextDay);
         }
@@ -196,7 +166,40 @@ export default function Preferences() {
 
       setIsLoading(true);
       try {
+        // If city_id is not available, fetch it first
+        if (!formData.city_id) {
+          console.log('⚠️ No city_id found, fetching from API...');
+          try {
+            const cityResponse = await fetch(`/api/city?search=${encodeURIComponent(formData.destination)}`);
+            const cityData = await cityResponse.json();
+            
+            // API returns array of cities, find exact match
+            if (Array.isArray(cityData) && cityData.length > 0) {
+              // Find exact match by city name
+              const exactMatch = cityData.find((c: any) => 
+                c.city === formData.destination || c.city_ascii === formData.destination
+              );
+              const city = exactMatch || cityData[0]; // Use first result if no exact match
+              
+              if (city && city._id) {
+                const fetchedCityId = city._id;
+                console.log('✅ Fetched city_id:', fetchedCityId, 'for city:', city.city);
+                
+                // Update formData with city_id
+                setFormData(prev => ({ ...prev, city_id: fetchedCityId }));
+                
+                // Also update localStorage
+                const updatedTourData = { ...formData, city_id: fetchedCityId };
+                saveTourData(updatedTourData);
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to fetch city_id:', error);
+          }
+        }
+
         const params = new URLSearchParams({
+          city_id: formData.city_id || '',
           destination: formData.destination,
           days: formData.days?.toString() || '1',
           budget: formData.budget?.toString() || '1000',
@@ -205,9 +208,10 @@ export default function Preferences() {
 
         const response = await fetch(`/api/places/tour-preferences?${params}`);
         const data = await response.json();
-        console.log('data', data);
+        console.log('🔍 Response:', data);
         if (data.success) {
           // Transform API data to CategorySection format
+          // API now returns liked/disliked from database automatically
           const transformedCategories: CategorySection[] = [
             {
               title: 'Restaurants',
@@ -221,6 +225,8 @@ export default function Preferences() {
                 rating: place.rating,
                 reviews: place.user_ratings_total,
                 price: place.avg_price + '$' || '$$$',
+                liked: place.liked ?? false, // From database
+                disliked: place.disliked ?? false, // From database
               })),
             },
             {
@@ -235,6 +241,8 @@ export default function Preferences() {
                 rating: place.rating,
                 reviews: place.user_ratings_total,
                 price: place.avg_price + '$' || '$$$',
+                liked: place.liked ?? false, // From database
+                disliked: place.disliked ?? false, // From database
               })),
             },
             {
@@ -250,6 +258,8 @@ export default function Preferences() {
                 reviews: place.user_ratings_total,
                 price: place.avg_price + '$' || 'Free',
                 info: '2-3h',
+                liked: place.liked ?? false, // From database
+                disliked: place.disliked ?? false, // From database
               })),
             },
             {
@@ -264,13 +274,15 @@ export default function Preferences() {
                 reviews: transport.user_ratings_total,
                 price: transport.price_level,
                 info: transport.info,
+                liked: transport.liked ?? false, // From database
+                disliked: transport.disliked ?? false, // From database
               })),
             },
           ];
 
           setCategories(transformedCategories);
           
-          // Restore liked/disliked status from localStorage for current day
+          // Restore liked/disliked status from localStorage for current day (overrides database preferences)
           const dayPrefs = getDayPreferences(currentDay);
           if (dayPrefs?.preferences) {
             restorePreferencesFromStorage(transformedCategories, dayPrefs.preferences);
@@ -307,8 +319,8 @@ export default function Preferences() {
           if (savedItem) {
             return {
               ...item,
-              liked: savedItem.liked || false,
-              disliked: savedItem.disliked || false,
+              liked: savedItem.liked ?? item.liked,
+              disliked: savedItem.disliked ?? item.disliked,
             };
           }
           return item;
@@ -370,8 +382,8 @@ export default function Preferences() {
         reviews: item.reviews,
         price: item.price,
         info: item.info,
-        liked: item.liked || false,
-        disliked: item.disliked || false,
+        liked: item.liked ?? false,
+        disliked: item.disliked ?? false,
       }))
     }));
 
@@ -461,8 +473,6 @@ export default function Preferences() {
       likedItems,
       dislikedItems,
     });
-
-    console.log(`✅ Saved preferences for Day ${currentDay}`);
     
     // Prepare data to send
     const dataToSend: PlacesData = {
@@ -482,23 +492,52 @@ export default function Preferences() {
       liked_activities: likedItems.filter(item => item.type === 'recreation_places').map(item => item.place_id?.toString() || ''),
       liked_transport: likedItems.filter(item => item.type === 'local_transport').map(item => item.name?.toString() || ''),
     };
-    
-    console.log(`🚀 Generating schedule for Day ${currentDay}`);
-    console.log('Data being sent:', dataToSend);
-    
-    // Update state and send data
-    setPlacesData(dataToSend);
-    router.post('/tour/generate-schedule', dataToSend as any);
-  };
 
-  const getIconColor = (title: string) => {
-    switch (title) {
-      case 'Restaurants': return 'text-red-600';
-      case 'Hotels': return 'text-blue-600';
-      case 'Recreation Places': return 'text-green-600';
-      case 'Local Transport': return 'text-yellow-600';
-      default: return 'text-gray-600';
-    }
+    const data_user_preferences = {
+      city_id: formData.city_id || null,
+      city_name: formData.destination || null,
+
+      disliked_restaurants: dislikedItems.filter(item => item.type === 'restaurants').map(item => item.place_id?.toString() || ''),
+      disliked_hotels: dislikedItems.filter(item => item.type === 'hotels').map(item => item.place_id?.toString() || ''),
+      disliked_activities: dislikedItems.filter(item => item.type === 'recreation_places').map(item => item.place_id?.toString() || ''),
+      disliked_transport: dislikedItems.filter(item => item.type === 'local_transport').map(item => item.name?.toString() || ''),
+      liked_restaurants: likedItems.filter(item => item.type === 'restaurants').map(item => item.place_id?.toString() || ''),
+      liked_hotels: likedItems.filter(item => item.type === 'hotels').map(item => item.place_id?.toString() || ''),
+      liked_activities: likedItems.filter(item => item.type === 'recreation_places').map(item => item.place_id?.toString() || ''),
+      liked_transport: likedItems.filter(item => item.type === 'local_transport').map(item => item.name?.toString() || ''),
+    };
+    console.log('📋 Current formData:', formData);
+    console.log('📋 User preferences data:', data_user_preferences);
+    
+    // Save user preferences to database
+    fetch('/api/tour/save-user-preferences', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify(data_user_preferences),
+    })
+      .then(response => {
+        if (response.status === 401) {
+          console.warn('⚠️ User not authenticated - preferences not saved to database');
+          return null;
+        }
+        if (!response.ok) {
+          throw new Error('Failed to save preferences');
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data) {
+          console.log('✅ User preferences saved successfully:', data);
+        }
+      })
+      .catch(error => {
+        console.error('❌ Error saving user preferences:', error);
+      });
+
+    router.post('/tour/generate-schedule', dataToSend as any);
   };
 
   // Get day schedules - read fresh from localStorage on each render

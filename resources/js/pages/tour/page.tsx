@@ -37,6 +37,7 @@ export default function TravelDashboard() {
   const [isFlightSummaryOpen, setIsFlightSummaryOpen] = useState(false);
   const totalGuests = adults + children;
   const [formData, setFormData] = useState<Partial<DataTour>>({
+    city_id: '',
     departure: '',
     destination: '',
     departureDate: '',
@@ -131,35 +132,53 @@ export default function TravelDashboard() {
 
   // Lấy tourData từ props hoặc localStorage
   useEffect(() => {
-    console.log('Props received:', props)
-    console.log('Stored tour data:', storedTourData)
-    
     // Priority: props.tourData > localStorage
-    let dataToLoad: Partial<DataTour> | undefined = props.tourData;
+    let dataToLoad: Partial<DataTour> | undefined;
     
-    if (!dataToLoad || Object.keys(dataToLoad).length === 0) {
+    if (props.tourData && Object.keys(props.tourData).length > 0) {
+      // Load from props and ensure all fields are properly set
+      dataToLoad = {
+        city_id: props.tourData.city_id || storedTourData?.city_id || '',
+        departure: props.tourData.departure,
+        destination: props.tourData.destination,
+        departureDate: props.tourData.departureDate,
+        arrivalDate: props.tourData.arrivalDate,
+        budget: props.tourData.budget,
+        adults: props.tourData.adults,
+        children: props.tourData.children,
+        infants: props.tourData.infants,
+        passengers: props.tourData.passengers,
+        days: props.tourData.days,
+        moneyFlight: props.tourData.moneyFlight,
+      };
+    } else if (storedTourData) {
       // Load from localStorage if no props data
-      if (storedTourData) {
-        dataToLoad = {
-          departure: storedTourData.departure,
-          destination: storedTourData.destination,
-          departureDate: storedTourData.departureDate,
-          arrivalDate: storedTourData.arrivalDate,
-          budget: storedTourData.budget,
-          adults: storedTourData.adults,
-          children: storedTourData.children,
-          infants: storedTourData.infants,
-          passengers: storedTourData.passengers,
-          days: storedTourData.days,
-          moneyFlight: storedTourData.moneyFlight,
-        };
-        console.log('Loading from localStorage:', dataToLoad);
-      }
-    } else {
-      console.log('Loading from props:', dataToLoad);
+      dataToLoad = {
+        city_id: storedTourData.city_id,
+        departure: storedTourData.departure,
+        destination: storedTourData.destination,
+        departureDate: storedTourData.departureDate,
+        arrivalDate: storedTourData.arrivalDate,
+        budget: storedTourData.budget,
+        adults: storedTourData.adults,
+        children: storedTourData.children,
+        infants: storedTourData.infants,
+        passengers: storedTourData.passengers,
+        days: storedTourData.days,
+        moneyFlight: storedTourData.moneyFlight,
+      };
     }
     
     if (dataToLoad) {
+      // If city_id is missing but destination exists, try to find it from cities list
+      if (!dataToLoad.city_id && dataToLoad.destination && cities.length > 0) {
+        const destinationCity = cities.find(city => city.city === dataToLoad.destination);
+        if (destinationCity) {
+          dataToLoad.city_id = destinationCity.id;
+          console.log('🔍 Found city_id for destination:', destinationCity.id);
+        }
+      }
+      
       setFormData(dataToLoad);
 
       // Cập nhật các state khác
@@ -187,12 +206,23 @@ export default function TravelDashboard() {
         setSelectedReturnFlight(storedTourData.selectedReturnFlight);
       }
     }
-  }, [props.tourData, storedTourData]);
+  }, [props.tourData, storedTourData, cities]);
 
 
   const handleDropdownChange = (field: keyof DataTour) => (e: any) => {
     setFormData(prev => ({ ...prev, [field]: e.value }))
   }
+  
+  // Custom handler for destination to save city_id
+  const handleDestinationChange = (e: any) => {
+    const selectedCity = cities.find(city => city.city === e.value);
+    setFormData(prev => ({ 
+      ...prev, 
+      destination: e.value,
+      city_id: selectedCity?.id || ''
+    }));
+  }
+  
   const locationOptions = cities.map((city: City) => ({
     value: city.city.toString(),
     label: `${city.city}, ${city.country}`
@@ -241,6 +271,9 @@ export default function TravelDashboard() {
     const departureDate = dates && dates[0] ? formatDate(dates[0]) : '';
     const arrivalDate = dates && dates[1] ? formatDate(dates[1]) : '';
 
+    if(calculateDays(departureDate, arrivalDate) <= 1){
+      return error('Departure date and arrival date must be greater than 1 day');
+    }
     if (
       !formData.departure ||
       !formData.destination ||
@@ -275,7 +308,9 @@ export default function TravelDashboard() {
     const departureDate = formData.departureDate || '';
     const arrivalDate = formData.arrivalDate || '';
     const days = (departureDate && arrivalDate) ? calculateDays(departureDate, arrivalDate) : 0;
-    console.log('Days:', days);
+    if (days <=1 ){
+      return error('Departure date and arrival date must be greater than 1 day');
+    }
     // Safely handle possible undefined values and correct passenger calculation
     const adults = Number(formData.adults) || 0;
     const children = Number(formData.children) || 0;
@@ -297,6 +332,7 @@ export default function TravelDashboard() {
 
     // Save to localStorage
     saveFlightData({
+      city_id: updatedFormData.city_id || '',
       departure: updatedFormData.departure || '',
       destination: updatedFormData.destination || '',
       departureDate,
@@ -361,7 +397,7 @@ export default function TravelDashboard() {
                     <label className="block text-sm text-gray-600 mb-2">Destination City *</label>
                     <Dropdown
                       value={formData.destination || ''}
-                      onChange={handleDropdownChange('destination')}
+                      onChange={handleDestinationChange}
                       options={locationOptions}
                       optionLabel="label"
                       optionValue="value"

@@ -15,6 +15,7 @@ export interface City {
 }
 
 export interface DataTour {
+  city_id: string
   departure: string
   destination: string
   departureDate: string

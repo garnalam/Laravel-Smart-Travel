@@ -58,7 +58,15 @@ export function TravelSearchForm() {
     formData.infants = infants;
     return `${adults} Adults, ${children} Children, ${infants} Infants`;
   };
-
+  const calculateDays = (departureDate: string, arrivalDate: string) => {
+    if (!departureDate || !arrivalDate) return 0;
+    if (departureDate == arrivalDate) return 1;
+    const departure = new Date(departureDate);
+    const arrival = new Date(arrivalDate);
+    const diffTime = Math.abs(arrival.getTime() - departure.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays + 1 ;
+  }
   useEffect(() => {
     const fetchCities = async () => {
       setLoadingCities(true)
@@ -96,8 +104,6 @@ export function TravelSearchForm() {
     };
     const departureDate = dates && dates[0] ? formatDate(dates[0]) : '';
     const arrivalDate = dates && dates[1] ? formatDate(dates[1]) : '';
-    console.log('Departure Date:', departureDate)
-    console.log('Arrival Date:', arrivalDate)
     if (!formData.departure || !formData.destination || !dates || !formData.budget || !formData.adults || !departureDate || !arrivalDate) {
       error(language === 'vi' ? 'Vui lòng điền đầy đủ thông tin bắt buộc' : 'Please fill all required fields')
       return
@@ -105,12 +111,14 @@ export function TravelSearchForm() {
     try {
       formData.departureDate = departureDate
       formData.arrivalDate = arrivalDate
+      if (calculateDays(departureDate, arrivalDate) <= 1) {
+        error(language === 'vi' ? 'Ngày khởi hành và ngày đến phải lớn hơn 1 ngày' : 'Departure date and arrival date must be greater than 1 day')
+        return
+      }
       router.post('/tour/flight', formData)
       success(language === 'vi' ? 'Tìm kiếm chuyến bay thành công!' : 'Flight search completed successfully!')
-      console.log('Search result:', formData)
     } catch (err) {
       error(language === 'vi' ? 'Có lỗi xảy ra khi tìm kiếm' : 'An error occurred during search')
-      console.error('Search error:', err)
     } finally {
       setIsLoading(false)
     }
