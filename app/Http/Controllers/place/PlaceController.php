@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Place;
 use App\Http\Controllers\Controller;
 use App\Models\Place;
 use App\Models\PlaceMetadata;
+use App\Models\City;
+use App\Models\User_preferences;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -142,6 +144,7 @@ class PlaceController extends Controller
     public function getPlacesForTourPreferences(Request $request)
     {
         $request->validate([
+            'city_id' => 'nullable|string',
             'destination' => 'required|string',
             'days' => 'nullable|integer|min:1|max:30',
             'budget' => 'nullable|numeric',
@@ -152,7 +155,7 @@ class PlaceController extends Controller
         $days = $request->input('days', 1);
         $budget = $request->input('budget', 1000);
         $passengers = $request->input('passengers', 1);
-
+        $cityId = $request->input('city_id', null);
         try {
             // Calculate how many places to return based on days
             $placesPerDay = 10;
@@ -167,15 +170,38 @@ class PlaceController extends Controller
             // Add transport options (can be static or from another collection)
             $transport = $this->getTransportOptions($destination);
 
+            
+            // Get user preferences if user is authenticated
+            $userPreferences = null;
+            if (auth()->check()) {
+                // Try to get preferences by city_id first, fallback to city_name
+                $cityIdentifier = $cityId ?? $destination;
+
+                $userPreferences = User_preferences::getPreferences(auth()->id(), $cityIdentifier);
+                Log::info('User preferences', ['user_preferences' => $userPreferences]);
+                Log::info('User preferences loaded', [
+                    'user_id' => auth()->id(),
+                    'city_id' => $cityId,
+                    'city_name' => $destination,
+                    'city_identifier_used' => $cityIdentifier,
+                    'preferences_found' => $userPreferences ? true : false,
+                    'preferences_data' => $userPreferences ? [
+                        'liked_restaurants_count' => count($userPreferences->liked_restaurants ?? []),
+                        'liked_hotels_count' => count($userPreferences->liked_hotels ?? []),
+                        'liked_activities_count' => count($userPreferences->liked_activities ?? []),
+                    ] : null,
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'destination' => $destination,
                 'days' => $days,
                 'data' => [
-                    'restaurants' => $this->formatPlaces($places['restaurants']),
-                    'hotels' => $this->formatPlaces($places['hotels']),
-                    'tourist_attractions' => $this->formatPlaces($places['tourist_attractions']),
-                    'transport' => $transport,
+                    'restaurants' => $this->formatPlacesWithPreferences($places['restaurants'], $userPreferences, 'restaurants'),
+                    'hotels' => $this->formatPlacesWithPreferences($places['hotels'], $userPreferences, 'hotels'),
+                    'tourist_attractions' => $this->formatPlacesWithPreferences($places['tourist_attractions'], $userPreferences, 'activities'),
+                    'transport' => $this->formatTransportWithPreferences($transport, $userPreferences),
                 ],
             ]);
         } catch (\Exception $e) {
@@ -268,6 +294,160 @@ class PlaceController extends Controller
                 'info' => '24/7',
             ],
         ];
+    }
+
+    /**
+     * Get city_id from city name
+     * 
+     * @param string $cityName
+     * @return string|null
+     */
+    private function getCityIdFromName($cityName)
+    {
+        try {
+            // Search for exact match first
+            $city = City::where('city', $cityName)->first();
+            
+            if (!$city) {
+                // Try case-insensitive search
+                $city = City::where('city', 'like', $cityName)->first();
+            }
+            
+            if (!$city) {
+                // Try searching in city_ascii
+                $city = City::where('city_ascii', 'like', $cityName)->first();
+            }
+            
+            if ($city && isset($city->_id)) {
+                return (string)$city->_id;
+            }
+            
+            Log::warning("City not found in database", ['city_name' => $cityName]);
+            return null;
+            
+        } catch (\Exception $e) {
+            Log::error("Error getting city ID", [
+                'city_name' => $cityName,
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
+
+    /**
+     * Format places with user preferences (liked/disliked)
+     * 
+     * @param \Illuminate\Support\Collection $places
+     * @param User_preferences|null $userPreferences
+     * @param string $type (restaurants, hotels, activities)
+     * @return array
+     */
+    private function formatPlacesWithPreferences($places, $userPreferences, $type)
+    {
+        // Get liked and disliked arrays from user preferences
+        $likedField = 'liked_' . $type;
+        $dislikedField = 'disliked_' . $type;
+        
+        $likedIds = $userPreferences ? ($userPreferences->$likedField ?? []) : [];
+        $dislikedIds = $userPreferences ? ($userPreferences->$dislikedField ?? []) : [];
+
+        // Log để debug
+        Log::info("Formatting places with preferences", [
+            'type' => $type,
+            'likedField' => $likedField,
+            'dislikedField' => $dislikedField,
+            'likedIds_count' => count($likedIds),
+            'dislikedIds_count' => count($dislikedIds),
+            'likedIds' => $likedIds,
+            'dislikedIds' => $dislikedIds,
+            'places_count' => $places->count(),
+        ]);
+
+        return $places->map(function ($place) use ($likedIds, $dislikedIds, $type) {
+            // Lấy displayName
+            $displayName = $place->displayName ?? [];
+            $displayText = is_array($displayName) ? ($displayName['text'] ?? '') : '';
+            $displayLanguage = is_array($displayName) ? ($displayName['language'] ?? '') : '';
+            
+            // Ưu tiên displayName.text, nếu rỗng thì dùng 'Unknown'
+            $name = !empty($displayText) ? $displayText : 'Unknown';
+            
+            // Lấy Google Place ID từ field 'id'
+            $googlePlaceId = $place->id ?? null;
+            
+            // Check if this place is liked or disliked
+            // Logic: nếu googlePlaceId có trong mảng likedIds/dislikedIds thì = true
+            $isLiked = in_array($googlePlaceId, $likedIds);
+            $isDisliked = in_array($googlePlaceId, $dislikedIds);
+            
+            // Log nếu place được liked hoặc disliked
+            if ($isLiked || $isDisliked) {
+                Log::info("Place matched preferences", [
+                    'type' => $type,
+                    'place_id' => $googlePlaceId,
+                    'name' => $name,
+                    'liked' => $isLiked,
+                    'disliked' => $isDisliked,
+                ]);
+            }
+            
+            return [
+                'id' => $googlePlaceId,
+                'place_id' => $googlePlaceId,
+                'name' => $name,
+                'displayName' => [
+                    'text' => $displayText,
+                    'language' => $displayLanguage,
+                ],
+                'avg_price' => $place->avg_price ?? 0,
+                'rating' => $place->rating ?? 0,
+                'user_ratings_total' => $place->userRatingCount ?? 0,
+                'type_display' => $place->primaryType ?? ($place->types[0] ?? 'Unknown'),
+                'liked' => $isLiked,
+                'disliked' => $isDisliked,
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Format transport options with user preferences
+     * 
+     * @param array $transport
+     * @param User_preferences|null $userPreferences
+     * @return array
+     */
+    private function formatTransportWithPreferences($transport, $userPreferences)
+    {
+        $likedTransport = $userPreferences ? ($userPreferences->liked_transport ?? []) : [];
+        $dislikedTransport = $userPreferences ? ($userPreferences->disliked_transport ?? []) : [];
+
+        // Log để debug
+        Log::info("Formatting transport with preferences", [
+            'likedTransport_count' => count($likedTransport),
+            'dislikedTransport_count' => count($dislikedTransport),
+            'likedTransport' => $likedTransport,
+            'dislikedTransport' => $dislikedTransport,
+        ]);
+
+        return array_map(function ($item) use ($likedTransport, $dislikedTransport) {
+            // Logic: nếu tên transport có trong mảng likedTransport/dislikedTransport thì = true
+            $isLiked = in_array($item['name'], $likedTransport);
+            $isDisliked = in_array($item['name'], $dislikedTransport);
+            
+            // Log nếu transport được liked hoặc disliked
+            if ($isLiked || $isDisliked) {
+                Log::info("Transport matched preferences", [
+                    'name' => $item['name'],
+                    'liked' => $isLiked,
+                    'disliked' => $isDisliked,
+                ]);
+            }
+            
+            return array_merge($item, [
+                'liked' => $isLiked,
+                'disliked' => $isDisliked,
+            ]);
+        }, $transport);
     }
 
     /**

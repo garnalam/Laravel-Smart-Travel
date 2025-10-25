@@ -72,18 +72,6 @@ export function Navbar() {
               {language === 'vi' ? 'Tour' : 'Tours'}
             </a>
 
-            {/* Currency & Language Toggle */}
-            <button
-              className="currency-language-btn hover:bg-blue-100"
-              style={{ backgroundColor: '#d7e5fc', borderColor: '#508ff6' }}
-            >
-              <i className="fas fa-globe"></i>
-              <span>{currency}</span>
-              <span>|</span>
-              <span>{language.toUpperCase()}</span>
-              <i className="fas fa-chevron-down text-xs"></i>
-            </button>
-
             <a href="#contact" className="font-medium text-gray-700 hover:text-blue-600 transition duration-300">
               {language === 'vi' ? 'Liên hệ' : 'Contact'}
             </a>

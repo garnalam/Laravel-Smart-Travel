@@ -8,10 +8,12 @@ import { data } from 'react-router';
 
 interface ScheduleItem {
   id: string | number;
+  place_id?: string;
   type: 'meal' | 'transfer' | 'activity' | 'hotel';
   startTime: string;
   endTime: string;
   title: string;
+  transport_mode?: string;
   cost: number;
   distance?: string;
   icon?: React.ReactNode;
@@ -171,25 +173,14 @@ export default function TourSchedule() {
   // Update schedules when props or stored data change
   useEffect(() => {
     if (props.scheduleData && props.scheduleData.length > 0) {
-      console.log('📦 Received scheduleData from backend:', props.scheduleData.map((s: any) => ({ day: s.day, items: s.items?.length })));
-      
-      // Debug: Log cost data for each item
-      props.scheduleData.forEach((schedule: any) => {
-        console.log(`💰 Schedule Day ${schedule.day} cost data:`, schedule.items?.map((item: any) => ({
-          title: item.title,
-          cost: item.cost,
-          costType: typeof item.cost
-        })));
-      });
+    
       
       // Sử dụng current_day từ tourData để xác định ngày cần lưu
       const currentDay = props.tourData?.current_day || urlDay || 1;
-      console.log(`🎯 Current day from tour_info: ${currentDay}`);
       
       // Nếu scheduleData là một mảng với một schedule, lưu nó cho current_day
       if (props.scheduleData.length === 1) {
         const schedule = props.scheduleData[0];
-        console.log(`💾 Saving schedule for day ${currentDay}`);
         saveDaySchedule(currentDay, {
           ...schedule,
           day: currentDay // Đảm bảo day được set đúng
@@ -198,20 +189,17 @@ export default function TourSchedule() {
         // Nếu có nhiều schedules, lưu tất cả
         props.scheduleData.forEach((schedule: any) => {
           const dayToSave = schedule.day || currentDay;
-          console.log(`💾 Saving schedule for day ${dayToSave}`);
           saveDaySchedule(dayToSave, schedule);
         });
       }
   
       const merged = buildMergedSchedules();
       setSchedules(merged);
-      console.log('🔀 Merged schedules:', merged.map(s => ({ day: s.day, completed: s.completed, items: s.items.length })));
   
       // Set currentDayIndex to current_day or urlDay
       const targetDay = currentDay;
       const newIdx = merged.findIndex(s => s.day === targetDay);
       if (newIdx !== -1) {
-        console.log(`✅ Setting currentDayIndex to ${newIdx} (day ${targetDay})`);
         setCurrentDayIndex(newIdx);
       }
   
@@ -245,21 +233,11 @@ export default function TourSchedule() {
         console.log('⚠️ No destination found, skipping places load');
         return;
       }
-      
-      console.log(`🔄 Loading places data for destination: ${tourData.destination}`);
-      
+            
       // First, try to load from localStorage (check day 1 as places are shared across all days)
       const savedPreferences = getDayPreferences(1);
-      
-      console.log('🔍 Checking localStorage:', savedPreferences);
-      
+            
       if (savedPreferences?.preferences) {
-        console.log(`📦 Found saved places data in localStorage:`, {
-          type: typeof savedPreferences.preferences,
-          isArray: Array.isArray(savedPreferences.preferences),
-          data: savedPreferences.preferences
-        });
-        
          // Transform data if it's in category array format
          let transformedData: any;
          if (Array.isArray(savedPreferences.preferences)) {
@@ -273,31 +251,19 @@ export default function TourSchedule() {
            
            savedPreferences.preferences.forEach((category: any) => {
              const title = category.title?.toLowerCase() || '';
-             console.log(`🏷️ Processing category: "${category.title}" -> "${title}"`);
              
              if (title.includes('restaurant') || title.includes('meal')) {
-               console.log(`  ✅ Matched as restaurants (${category.items?.length || 0} items)`);
                transformedData.restaurants = category.items || [];
              } else if (title.includes('hotel') || title.includes('accommodation')) {
-               console.log(`  ✅ Matched as hotels (${category.items?.length || 0} items)`);
                transformedData.hotels = category.items || [];
              } else if (title.includes('recreation') || title.includes('activit') || title.includes('attraction') || title.includes('tourist')) {
-               console.log(`  ✅ Matched as tourist_attractions (${category.items?.length || 0} items)`);
                transformedData.tourist_attractions = category.items || [];
              } else if (title.includes('transport')) {
-               console.log(`  ✅ Matched as transport (${category.items?.length || 0} items)`);
                transformedData.transport = category.items || [];
              } else {
                console.log(`  ⚠️ No match for this category`);
              }
            });
-          
-          console.log('🔄 Transformed array data to object:', {
-            restaurants: transformedData.restaurants.length,
-            hotels: transformedData.hotels.length,
-            tourist_attractions: transformedData.tourist_attractions.length,
-            transport: transformedData.transport.length
-          });
         } else {
           // Data is already in correct format
           transformedData = savedPreferences.preferences;
@@ -308,14 +274,6 @@ export default function TourSchedule() {
       }
       
       // If not in localStorage, fetch from API
-      console.log(`🔍 No saved places data found. Fetching from API...`);
-      console.log('Fetch params:', {
-        destination: tourData.destination,
-        days: tourData.days,
-        budget: tourData.budget,
-        passengers: tourData.passengers
-      });
-      
       const params = new URLSearchParams({
         destination: tourData.destination || '',
         days: tourData.days?.toString() || '1',
@@ -328,12 +286,6 @@ export default function TourSchedule() {
         const placesResponse = await response.json();
         
         if (placesResponse.success) {
-          console.log('✅ Places fetched successfully:', {
-            restaurants: placesResponse.data.restaurants?.length || 0,
-            hotels: placesResponse.data.hotels?.length || 0,
-            tourist_attractions: placesResponse.data.tourist_attractions?.length || 0,
-            transport: placesResponse.data.transport?.length || 0
-          });
           
           // Save to component state
           setPlacesData(placesResponse.data);
@@ -348,7 +300,6 @@ export default function TourSchedule() {
             });
           }
           
-          console.log(`💾 Places data saved to localStorage for all ${totalDays} days`);
         } else {
           console.error('❌ Error fetching places:', placesResponse.message);
         }
@@ -362,19 +313,6 @@ export default function TourSchedule() {
 
   // Memoize day schedules to prevent recalculation on every render
   const daySchedules = React.useMemo(() => getAllDaySchedules(), [schedules]);
-
-  // Debug: Log placesData when it changes
-  useEffect(() => {
-    console.log('🔍 placesData updated:', {
-      hasData: !!placesData,
-      restaurants: placesData?.restaurants?.length || 0,
-      hotels: placesData?.hotels?.length || 0,
-      tourist_attractions: placesData?.tourist_attractions?.length || 0,
-      transport: placesData?.transport?.length || 0,
-      currentDay: currentSchedule?.day
-    });
-  }, [placesData, currentSchedule?.day]);
-
   const formatCost = (cost: any): string => {
     const numCost = parseFloat(cost);
     return isNaN(numCost) ? '0.00' : numCost.toFixed(2);
@@ -403,8 +341,6 @@ export default function TourSchedule() {
       default:
         places = [];
     }
-    
-    console.log(`📍 Available places for ${type}:`, places.length);
     return places;
   };
 
@@ -490,15 +426,18 @@ export default function TourSchedule() {
     const payload = {
       schedules: schedules.map(s => ({
         day: s.day, date: s.date, completed: s.completed, totalCost: s.totalCost,
-        items: s.items.map(i => ({ id: i.id, type: i.type, startTime: i.startTime, endTime: i.endTime, title: i.title, cost: i.cost, distance: i.distance || '' }))
+        items: s.items.map(i => ({ id: i.id, place_id: i.place_id, type: i.type, startTime: i.startTime, endTime: i.endTime, title: i.title, cost: i.cost,transport_mode: i.transport_mode, distance: i.distance || '' }))
       })),
       destination: tourData.destination,
       departure: tourData.departure,
       days: tourData.days ?? urlDays,
       budget: tourData.budget,
       passengers: tourData.passengers,
+      // selectedDepartureFlight : 
+      selectedDepartureFlight: storedTourData?.selectedDepartureFlight,
+      selectedReturnFlight: storedTourData?.selectedReturnFlight,
     };
-  
+    console.log(payload)
     if (window.confirm('Generate final tour? This will clear your saved progress.')) {
       setIsGenerating(true);
       router.post(
@@ -513,7 +452,6 @@ export default function TourSchedule() {
   };
   
   const handleEditItem = (item: ScheduleItem) => {
-    console.log(`🔧 Editing item:`, item);
     setSelectedItemToReplace(item);
     setShowReplaceModal(true);
     setSearchQuery('');
@@ -531,7 +469,6 @@ export default function TourSchedule() {
 
     saveDaySchedule(currentSchedule.day, updatedSchedule);
     setSchedules(schedules.map(s => s.day === currentSchedule.day ? updatedSchedule : s));
-    console.log('✅ Item deleted successfully');
   };
 
   const handleReplaceItem = (newPlace: any) => {
@@ -546,8 +483,10 @@ export default function TourSchedule() {
         return {
           ...item,
           id: newId,
+          place_id: newPlace.place_id || newPlace.id,
           title: newPlace.name,
           cost: newCost,
+          transport_mode: newPlace.transport_mode,
         };
       }
       return item;
@@ -572,8 +511,6 @@ export default function TourSchedule() {
     setShowReplaceModal(false);
     setSelectedItemToReplace(null);
     setSearchQuery('');
-    
-    console.log('✅ Item replaced successfully');
   };
 
   return (
