@@ -187,6 +187,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'restaurants' => $restaurants->map(function ($place) {
@@ -199,6 +200,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'hotels' => $hotels->map(function ($place) {
@@ -211,6 +213,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'liked_activities' => $liked_activities->map(function ($place) {
@@ -223,6 +226,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'liked_restaurants' => $liked_restaurants->map(function ($place) {
@@ -235,6 +239,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'liked_hotels' => $liked_hotels->map(function ($place) {
@@ -247,6 +252,8 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
+
                 ];
             })->toArray(),
             'disliked_activities' => $disliked_activities->map(function ($place) {
@@ -259,6 +266,8 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
+
                 ];
             })->toArray(),
             'disliked_restaurants' => $disliked_restaurants->map(function ($place) {
@@ -271,6 +280,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
             'disliked_hotels' => $disliked_hotels->map(function ($place) {
@@ -283,6 +293,7 @@ class TourController extends Controller
                     'reviews' => $place->userRatingCount ?? 0,
                     'latitude' => $place->location['latitude'] ?? null,
                     'longitude' => $place->location['longitude'] ?? null,
+                    'avg_price' => $place->avg_price ?? 0,
                 ];
             })->toArray(),
         ];
