@@ -6,6 +6,7 @@ use App\Http\Controllers\place\PlaceController;
 use App\Http\Controllers\place\PlaceFetchController;
 use App\Http\Controllers\AI\AIRecommendationController;
 use App\Http\Controllers\tour\TourController;
+use App\Http\Controllers\Flight\FlightController;
 
 // Test MongoDB connection
 Route::get('/test-mongo', [CityController::class, 'testMongo'])->name('test.mongo');
@@ -34,4 +35,9 @@ Route::prefix('ai')->group(function () {
     Route::post('/recommendations/by-city-name', [AIRecommendationController::class, 'getRecommendationsByCityName'])->name('ai.recommendations.by_city');
     Route::get('/cities', [AIRecommendationController::class, 'getCities'])->name('ai.cities');
     Route::get('/health', [AIRecommendationController::class, 'healthCheck'])->name('ai.health');
+});
+
+// Flight Search routes
+Route::prefix('flight')->group(function () {
+    Route::post('/search', [FlightController::class, 'searchFlights'])->name('flight.search');
 });

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import Optional
 from datetime import datetime
-
+import flight
 from config import settings
 from models import (
     TravelPreferencesRequest,
@@ -14,7 +14,8 @@ from models import (
     HealthCheckResponse,
     CitySearchRequest,
     PlaceData,
-    PlaceName
+    PlaceName,
+    FlightSearchRequest
 )
 from services import create_user_tour_info_simple, build_final_tour_json
 
@@ -216,6 +217,26 @@ async def get_travel_recommendations(
             success=False,
             error=f"Internal server error: {str(e)}",
             data=None
+        )
+
+@app.post("/api/flight-search", tags=["Flight Search"])
+async def flight_search(request: FlightSearchRequest, authenticated: bool = Depends(verify_api_key)):
+    """
+    Search for flights
+    """
+    try:
+        data = flight.information_flight(request.departure_city, request.arrival_city, request.departure_date)
+        return JSONResponse(
+            status_code=200,
+            content={"success": True, "data": data}
+        )
+    except Exception as e:
+        print(f"Error in flight_search: {e}")
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"success": False, "error": f"Internal server error: {str(e)}", "data": None}
         )
 
 # Exception handler

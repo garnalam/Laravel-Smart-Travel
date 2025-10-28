@@ -227,6 +227,71 @@ class PythonApiService
     }
 
     /**
+     * Search for flights
+     *
+     * @param string $departureCity Departure city name or IATA code
+     * @param string $arrivalCity Arrival city name or IATA code
+     * @param string $departureDate Departure date (YYYY-MM-DD)
+     * @param string|null $returnDate Return date (YYYY-MM-DD) - optional
+     * @return array Response from Python API
+     */
+    public function searchFlights(
+        string $departureCity,
+        string $arrivalCity,
+        string $departureDate,
+        ?string $returnDate = null
+    ): array {
+        try {
+            $headers = [];
+            if (!empty($this->apiKey)) {
+                $headers['X-API-Key'] = $this->apiKey;
+            }
+
+            $requestData = [
+                'departure_city' => $departureCity,
+                'arrival_city' => $arrivalCity,
+                'departure_date' => $departureDate,
+            ];
+
+            if ($returnDate) {
+                $requestData['return_date'] = $returnDate;
+            }
+
+            Log::info('Searching flights', $requestData);
+
+            $response = Http::timeout($this->timeout)
+                ->withHeaders($headers)
+                ->post("{$this->baseUrl}/api/flight-search", $requestData);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('Python API Flight Search Error', [
+                'status' => $response->status(),
+                'body' => $response->body()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => "Python API returned status {$response->status()}: {$response->body()}",
+                'data' => null
+            ];
+        } catch (\Exception $e) {
+            Log::error('Python API Flight Search Exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $e->getMessage(),
+                'data' => null
+            ];
+        }
+    }
+
+    /**
      * Test Python API connection
      *
      * @return array Health check response

@@ -30,6 +30,8 @@ export default function TravelDashboard() {
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
   const [selectedFlight, setSelectedFlight] = useState(false);
+  const [outboundFlights, setOutboundFlights] = useState<any[]>([]);
+  const [returnFlights, setReturnFlights] = useState<any[]>([]);
   const [isDepartureFlightOpen, setIsDepartureFlightOpen] = useState(false);
   const [selectedDepartureFlight, setSelectedDepartureFlight] = useState<any>(null);
   const [isReturnFlightOpen, setIsReturnFlightOpen] = useState(false);
@@ -51,69 +53,42 @@ export default function TravelDashboard() {
     infants: 0,
   })
 
-  // Mock flight data
-  const mockFlights = [
-    {
-      id: 1,
-      airline: 'Vietnam Airlines',
-      airlineCode: 'V',
-      departTime: '09:15',
-      arriveTime: '11:30',
-      departCode: 'ALE',
-      arriveCode: 'AHM',
-      duration: '2h35m',
-      type: 'Direct',
-      price: 95.00
-    },
-    {
-      id: 2,
-      airline: 'Emirates',
-      airlineCode: 'E',
-      departTime: '14:20',
-      arriveTime: '17:05',
-      departCode: 'ALE',
-      arriveCode: 'AHM',
-      duration: '2h45m',
-      type: 'Direct',
-      price: 120.00
-    },
-    {
-      id: 3,
-      airline: 'Qatar Airways',
-      airlineCode: 'Q',
-      departTime: '08:00',
-      arriveTime: '10:50',
-      departCode: 'ALE',
-      arriveCode: 'AHM',
-      duration: '2h50m',
-      type: 'Direct',
-      price: 110.00
-    },
-    {
-      id: 4,
-      airline: 'Etihad',
-      airlineCode: 'ET',
-      departTime: '16:30',
-      arriveTime: '19:20',
-      departCode: 'ALE',
-      arriveCode: 'AHM',
-      duration: '2h50m',
-      type: 'Direct',
-      price: 105.00
-    },
-    {
-      id: 5,
-      airline: 'Air India',
-      airlineCode: 'AI',
-      departTime: '11:45',
-      arriveTime: '14:40',
-      departCode: 'ALE',
-      arriveCode: 'AHM',
-      duration: '2h55m',
-      type: 'Direct',
-      price: 89.00
+  // Helpers to map API flights to UI model
+  const formatTime = (iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
+  const diffDuration = (startIso?: string, endIso?: string) => {
+    if (!startIso || !endIso) return ''
+    const start = new Date(startIso).getTime()
+    const end = new Date(endIso).getTime()
+    const mins = Math.max(0, Math.round((end - start) / 60000))
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    return `${h}h${m.toString().padStart(2, '0')}m`
+  }
+  const mapApiFlightToUI = (f: any, idx: number) => {
+    const airlineCode = (f.flight_code || '').slice(0, 2) || (f.airline || '?').slice(0, 2)
+    return {
+      id: `${f.flight_code || 'FL'}_${idx}`,
+      airline: f.airline,
+      airlineCode,
+      departTime: formatTime(f.dep_time),
+      arriveTime: formatTime(f.arr_time),
+      departCode: f.dep_iata,
+      arriveCode: f.arr_iata,
+      duration: diffDuration(f.dep_time, f.arr_time),
+      type: Array.isArray(f.stops) && f.stops.length > 0 ? `${f.stops.length} stop${f.stops.length > 1 ? 's' : ''}` : 'Direct',
+      price: Number(f.price || 0),
+      raw: f,
     }
-  ]
+  }
+  const flattenGroupedFlights = (grouped: any) => {
+    if (!grouped || typeof grouped !== 'object') return []
+    const all = Object.values(grouped).flat() as any[]
+    return all.map((f, i) => mapApiFlightToUI(f, i))
+  }
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -285,7 +260,7 @@ export default function TravelDashboard() {
       error('Please fill all required fields');
       return;
     }
-
+    
     // Cập nhật formData với tất cả thông tin
     setFormData(prev => ({
       ...prev,
@@ -296,9 +271,93 @@ export default function TravelDashboard() {
       departureDate: departureDate,
       arrivalDate: arrivalDate
     }));
+    const data_outbound = {
+      departure_city: formData.departure,
+      arrival_city: formData.destination,
+      departure_date: departureDate,
+    }
+    const data_return = {
+      departure_city: formData.destination,
+      arrival_city: formData.departure,
+      departure_date: arrivalDate,
+    }
 
-    setSelectedFlight(true)
-    success('Form submitted successfully')
+    console.group('✈️ Flight Search Request')
+    console.log('data_outbound:', data_outbound)
+    console.log('data_return:', data_return)
+    console.groupEnd()
+
+    fetch("/api/flight/search", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data_outbound),
+    })
+      .then(async (response) => {
+        console.log('📡 Response status:', response.status, response.statusText)
+        let json
+        try {
+          json = await response.json()
+        } catch (e) {
+          console.warn('⚠️ Could not parse JSON response')
+          throw new Error('Invalid JSON response')
+        }
+        console.log('🔍 Response JSON:', json)
+        return json
+      })
+      .then((data) => {
+        if (data.success) {
+          setSelectedFlight(data.data)
+          setOutboundFlights(flattenGroupedFlights(data.data))
+          success('Flight search success')
+        } else {
+          console.error('❌ Flight search error:', data.error)
+          error(data.error || 'Flight search failed')
+        }
+      })
+      .catch((err) => {
+        console.error('🌩️ Network/Unexpected error fetching flights:', err)
+        error('Network error while searching flights')
+      })
+
+    fetch("/api/flight/search", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data_return),
+    })
+      .then(async (response) => {
+        console.log('📡 Response status:', response.status, response.statusText)
+        let json
+        try {
+          json = await response.json()
+        } catch (e) {
+          console.warn('⚠️ Could not parse JSON response')
+          throw new Error('Invalid JSON response')
+        }
+        console.log('🔍 Response JSON:', json)
+        return json
+      })
+      .then((data) => {
+        if (data.success) {
+          setSelectedFlight(data.data)
+          setReturnFlights(flattenGroupedFlights(data.data))
+          success('Flight search success')
+        } else {
+          console.error('❌ Flight search error:', data.error)
+          error(data.error || 'Flight search failed')
+        }
+      })
+      .catch((err) => {
+        console.error('🌩️ Network/Unexpected error fetching flights:', err)
+        error('Network error while searching flights')
+      })
+    // setSelectedFlight(true)
+    // success('Form submitted successfully')
   }
   const submitFormTour = (e: React.FormEvent) => {
     e.preventDefault();
@@ -560,7 +619,10 @@ export default function TravelDashboard() {
                     {/* Flight Options - Expandable */}
                     {isDepartureFlightOpen && (
                       <div className="p-4 space-y-3 bg-gray-50">
-                        {mockFlights.map((flight) => (
+                        {outboundFlights.length === 0 && (
+                          <div className="text-sm text-gray-500">No outbound flights found</div>
+                        )}
+                        {outboundFlights.map((flight) => (
                           <div
                             key={flight.id}
                             className="bg-white rounded-lg border border-gray-200 p-4 hover:border-blue-400 hover:shadow-md transition-all"
@@ -670,9 +732,12 @@ export default function TravelDashboard() {
                     </div>
 
                     {/* Flight Options - Expandable */}
-                    {isReturnFlightOpen && (
+                {isReturnFlightOpen && (
                       <div className="p-4 space-y-3 bg-gray-50">
-                        {mockFlights.map((flight) => (
+                        {returnFlights.length === 0 && (
+                          <div className="text-sm text-gray-500">No return flights found</div>
+                        )}
+                        {returnFlights.map((flight) => (
                           <div
                             key={flight.id}
                             className="bg-white rounded-lg border border-gray-200 p-4 hover:border-orange-400 hover:shadow-md transition-all"

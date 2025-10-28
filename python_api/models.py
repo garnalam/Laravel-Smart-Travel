@@ -149,3 +149,9 @@ class CitySearchRequest(BaseModel):
     liked_transport: Optional[List[str]] = Field(default=[], description="Liked transport modes")
     disliked_transport: Optional[List[str]] = Field(default=[], description="Disliked transport modes")
 
+class FlightSearchRequest(BaseModel):
+    """Request for flight search"""
+    departure_city: str = Field(..., description="Departure city")
+    arrival_city: str = Field(..., description="Arrival city")
+    departure_date: str = Field(..., description="Departure date")
+    return_date: Optional[str] = Field(default=None, description="Return date")
