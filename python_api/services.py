@@ -138,8 +138,6 @@ def get_gemini_travel_recommendations(user_input: UserTourInfo, destination_name
         BUDGET BREAKDOWN:
         💰 Total Budget: ${budget} USD for {guests} guests for {duration} days
         💰 Daily Budget: ${budget/duration:.2f} USD per day
-        💰 Per Person Budget: ${budget/guests:.2f} USD per person for entire trip
-        💰 Daily Per Person: ${budget/(duration*guests):.2f} USD per person per day
 
         PLANNING RULES & CONSTRAINTS:
         
@@ -284,11 +282,10 @@ def get_gemini_travel_recommendations(user_input: UserTourInfo, destination_name
                 result_text = result_text[:-3]
             
             itinerary_data = json.loads(result_text.strip())
-            
+            print(itinerary_data)
             # Post-process transport preferences
             liked_modes = [m.lower() for m in user_prefs.get('liked_transport', [])]
             disliked_modes = [m.lower() for m in user_prefs.get('disliked_transport', [])]
-            
             for day in itinerary_data.get('days', []):
                 for activity in day.get('activities', []):
                     if activity.get('type') == 'transfer':

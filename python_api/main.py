@@ -162,7 +162,6 @@ async def get_travel_recommendations(
                 'restaurants': [serialize_place_data(place) for place in request.restaurants],
                 'hotels': [serialize_place_data(place) for place in request.hotels]
             }
-        
         # Generate itinerary with provided places data
 
         result = build_final_tour_json(
@@ -203,7 +202,6 @@ async def get_travel_recommendations(
                 "budget_utilized": (float(result["total_estimated_cost"]) / float(result["budget"]) * 100) if float(result["budget"]) > 0 else 0
             }
         }
-        print(response_data)
         return TravelRecommendationResponse(
             success=True,
             error=None,
