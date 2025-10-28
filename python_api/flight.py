@@ -178,13 +178,13 @@ def _load_city_to_iata_from_csv() -> dict:
     Uses accent-stripped, uppercased city names as keys, keeps first occurrence.
     """
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    csv_path = os.path.join(base_dir, 'city_airport_codes.csv')
+    csv_path = os.path.join(base_dir, 'airports_clean.csv')
     mapping = {}
     try:
         with open(csv_path, mode='r', encoding='utf-8', newline='') as f:
             reader = csv.DictReader(f)
             city_col = 'City'
-            code_col = 'Airport Code'
+            code_col = 'IATA'
             for row in reader:
                 city = (row.get(city_col) or '').strip()
                 code = (row.get(code_col) or '').strip().upper()
