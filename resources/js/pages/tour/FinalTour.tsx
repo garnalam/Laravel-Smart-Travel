@@ -67,7 +67,7 @@ export default function FinalTour() {
     return isNaN(numCost) ? '0.00' : numCost.toFixed(2);
   };
   const schedules = tourData.schedules || [];
-  const totalCost = schedules.reduce((sum, schedule) => sum + schedule.totalCost, 0);
+  const totalCost = schedules.reduce((sum, schedule) => sum + schedule.totalCost, 0) + ((tourData?.selectedDepartureFlight?.price ?? 0) + (tourData?.selectedReturnFlight?.price ?? 0));
   const { success, error } = useToast()
   const getActivityIcon = (type: string) => {
     switch (type) {

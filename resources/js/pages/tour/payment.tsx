@@ -53,12 +53,12 @@ export default function Home() {
         destination: props.tourData?.destination,
         duration: props.tourData?.days,
         participants: props.tourData?.passengers,
-        flight_cost: props.tourData?.flight_cost,
+        flight_cost: (props.tourData?.flights?.selectedDepartureFlight?.price ?? 0) + (props.tourData?.flights?.selectedReturnFlight?.price ?? 0),
         image: "https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
         description: "Experience the tropical beauty of Bali with visits to ancient temples, stunning beaches, and traditional villages.",
     };
 
-    const totalPrice = props.tourData?.days_cost.reduce((acc: number, curr: number) => acc + curr, 0) + props.tourData?.flight_cost;
+    const totalPrice = props.tourData?.days_cost.reduce((acc: number, curr: number) => acc + curr, 0) + tour.flight_cost;
 
     useEffect(() => {
         console.log('tourData', props);
