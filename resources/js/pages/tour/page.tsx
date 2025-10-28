@@ -12,11 +12,12 @@ import GuestCounter from '@/components/ui/GuestCounter';
 import useOnClickOutside from '../../js/useOnClickOutside';
 import { useToast } from '@/hooks/useToast';
 import { router, usePage } from '@inertiajs/react';
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useTourStorage } from '../../hooks/useTourStorage';
 
 export default function TravelDashboard() {
   const { success, error } = useToast()
-  const { props } = usePage<{ tourData?: Partial<DataTour> }>()
+  const { props } = usePage<InertiaPageProps & { tourData?: Partial<DataTour> }>()
   const { saveFlightData, tourData: storedTourData, loadTourData } = useTourStorage();
   const [budget, setBudget] = useState(0);
   const [passengers, setPassengers] = useState(1);

@@ -4,6 +4,7 @@ import { Navbar } from '../../components/common/Navbar';
 import { router, usePage } from '@inertiajs/react';
 import { DataTour } from '../../types/domain';
 import { useTourStorage } from '../../hooks/useTourStorage';
+import type { PageProps } from '@inertiajs/core';
 
 interface PlacesData {
   currentDay: number;
@@ -46,7 +47,7 @@ interface CategorySection {
 }
 
 export default function Preferences() {
-  const { props, url } = usePage<{ tourData?: Partial<DataTour> }>()
+  const { props, url } = usePage<PageProps & { tourData?: Partial<DataTour> }>()
   const [isLoading, setIsLoading] = useState(true);
 
   const { 

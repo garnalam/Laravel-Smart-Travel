@@ -8,6 +8,7 @@ import '../../../css/payment.css'; // File CSS cho dropdown
 import { router, useForm, usePage } from "@inertiajs/react";
 import { useEffect } from "react";
 import { useToast } from '@/hooks/useToast';
+import { PageProps } from '@inertiajs/core';
 
 // import { Navbar } from "@/components/common/Navbar";
 interface TourInfo {
@@ -32,7 +33,7 @@ interface PaymentFormData {
 }
 
 export default function Home() {
-    const { props } = usePage<{ tourData?: any }>();
+    const { props } = usePage<PageProps & { tourData?: any }>();
     const { success, error } = useToast();
     const [formData, setFormData] = useState<PaymentFormData>({
         fullName: "",

@@ -15,6 +15,20 @@ export interface City {
   country: string
 }
 
+export interface Flight {
+  id: string
+  departure_city: string
+  arrival_city: string
+  departure_date: string
+  return_date: string
+}
+
+export interface FlightResponse {
+  success: boolean
+  data: Flight[]
+  error?: string
+}
+
 export interface DataTour {
   city_id: string
   departure: string
