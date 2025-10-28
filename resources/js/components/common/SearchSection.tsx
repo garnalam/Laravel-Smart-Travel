@@ -1,6 +1,4 @@
-
-import { useState } from 'react'
-import { useAuthStore } from '@/store/useAuthStore'
+import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { TravelSearchForm } from '@/components/forms/TravelSearchForm'
 import { HotelSearchForm } from '@/components/forms/HotelSearchForm'
@@ -9,42 +7,61 @@ import { AirlineSearchForm } from '@/components/forms/AirlineSearchForm'
 type TabType = 'travel' | 'hotel' | 'airline' | 'package' | 'restaurant'
 
 export function SearchSection() {
-  const { isAuthenticated } = useAuthStore()
   const { language } = useAppStore()
-
   const [activeTab, setActiveTab] = useState<TabType>('travel')
 
-  const tabs = [
-    {
-      id: 'travel' as TabType,
-      icon: 'fas fa-car',
-      label: language === 'vi' ? 'Tour du lịch cá nhân' : 'Personalized Travel tour'
-    },
-    {
-      id: 'hotel' as TabType,
-      icon: 'fas fa-building',
-      label: language === 'vi' ? 'Khách sạn' : 'Hotel'
-    },
-    {
-      id: 'airline' as TabType,
-      icon: 'fas fa-plane',
-      label: language === 'vi' ? 'Vé máy bay' : 'Airlines tickets'
-    },
-    {
-      id: 'package' as TabType,
-      icon: 'fas fa-suitcase-rolling',
-      label: language === 'vi' ? 'Tour trọn gói' : 'Package tour'
-    },
-    {
-      id: 'restaurant' as TabType,
-      icon: 'fas fa-utensils',
-      label: language === 'vi' ? 'Dịch vụ khác' : 'Restaurant'
-    }
-  ]
-
+  const tabs = useMemo(
+    () => [
+      {
+        id: 'travel' as TabType,
+        icon: 'fas fa-route',
+        label: language === 'vi' ? 'Tour cá nhân hóa' : 'Personal tours',
+        description:
+          language === 'vi'
+            ? 'Kết hợp hoạt động, lịch trình và cảm hứng riêng của bạn'
+            : 'Blend activities, schedules and your personal inspiration',
+      },
+      {
+        id: 'hotel' as TabType,
+        icon: 'fas fa-building',
+        label: language === 'vi' ? 'Khách sạn' : 'Hotels',
+        description:
+          language === 'vi'
+            ? 'Chọn nơi lưu trú tinh tế phù hợp ngân sách'
+            : 'Find curated stays aligned with your budget',
+      },
+      {
+        id: 'airline' as TabType,
+        icon: 'fas fa-plane-departure',
+        label: language === 'vi' ? 'Vé máy bay' : 'Flights',
+        description:
+          language === 'vi'
+            ? 'Kết nối các chặng bay tối ưu cho hành trình'
+            : 'Optimise flight legs for your journey',
+      },
+      {
+        id: 'package' as TabType,
+        icon: 'fas fa-suitcase-rolling',
+        label: language === 'vi' ? 'Tour trọn gói' : 'Packages',
+        description:
+          language === 'vi'
+            ? 'Gói trải nghiệm toàn diện sẽ ra mắt'
+            : 'Full experience bundles coming soon',
+      },
+      {
+        id: 'restaurant' as TabType,
+        icon: 'fas fa-utensils',
+        label: language === 'vi' ? 'Ẩm thực & dịch vụ' : 'Food & services',
+        description:
+          language === 'vi'
+            ? 'Khám phá dịch vụ bổ sung trong thời gian tới'
+            : 'Supplementary services arriving soon',
+      },
+    ],
+    [language]
+  )
 
   const renderContent = () => {
-
     switch (activeTab) {
       case 'travel':
         return <TravelSearchForm />
@@ -54,31 +71,33 @@ export function SearchSection() {
         return <AirlineSearchForm />
       case 'package':
         return (
-          <div className="text-center py-12">
-            <i className="fas fa-suitcase-rolling text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              {language === 'vi' ? 'Tour Trọn Gói Sắp Ra Mắt' : 'Package Tours Coming Soon'}
-            </h3>
-            <p className="text-gray-500">
+          <div className="dashboard-placeholder">
+            <i className="fas fa-suitcase-rolling" aria-hidden="true" />
+            <h3>
               {language === 'vi'
-                ? 'Chúng tôi đang chuẩn bị những gói tour tuyệt vời cho bạn!'
-                : "We're working on amazing package deals for you!"
-              }
+                ? 'Tour trọn gói đang được chuẩn bị'
+                : 'Package tours are being refined'}
+            </h3>
+            <p>
+              {language === 'vi'
+                ? 'Chúng tôi đang tạo nên các hành trình đầy cảm hứng dành cho bạn.'
+                : 'We are crafting curated journeys designed around your passions.'}
             </p>
           </div>
         )
       case 'restaurant':
         return (
-          <div className="text-center py-12">
-            <i className="fas fa-concierge-bell text-6xl text-gray-300 mb-4"></i>
-            <h3 className="text-xl font-semibold text-gray-600 mb-2">
-              {language === 'vi' ? 'Dịch Vụ Bổ Sung' : 'Restaurant'}
-            </h3>
-            <p className="text-gray-500">
+          <div className="dashboard-placeholder">
+            <i className="fas fa-concierge-bell" aria-hidden="true" />
+            <h3>
               {language === 'vi'
-                ? 'Nhà hàng sẽ sớm được cung cấp!'
-                : 'Restaurant will be available soon!'
-              }
+                ? 'Dịch vụ ẩm thực & trải nghiệm sẽ sớm ra mắt'
+                : 'Dining & experience services launching soon'}
+            </h3>
+            <p>
+              {language === 'vi'
+                ? 'Theo dõi bảng điều khiển để nhận cập nhật sớm nhất.'
+                : 'Stay tuned to your dashboard for the earliest updates.'}
             </p>
           </div>
         )
@@ -88,34 +107,38 @@ export function SearchSection() {
   }
 
   return (
-    <>
-      <section className="py-8 bg-gray-50 relative text-gray-950">
-        <div className="container mx-auto px-4">
-          <div className="search-container p-8 relative">
-            <div>
-              {/* Tab Navigation */}
-              <div className="flex flex-wrap justify-between border-b border-gray-200 mb-8">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`tab-button flex items-center font-medium ${activeTab === tab.id ? 'tab-active' : 'tab-inactive'
-                      }`}
-                  >
-                    <i className={`${tab.icon} mr-2 ${tab.id === 'airline' ? 'text-orange-500' : ''}`}></i>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Tab Content */}
-              <div className="relative">
-                {renderContent()}
-              </div>
-            </div>
-          </div>
+    <section id="dashboard-search" className="dashboard-search">
+      <div className="dashboard-search__glow" aria-hidden="true" />
+      <div className="dashboard-search__inner">
+        <div className="dashboard-tabs" role="tablist" aria-label="Search categories">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                className={`dashboard-tab ${isActive ? 'dashboard-tab--active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+                aria-pressed={isActive}
+                aria-selected={isActive}
+                role="tab"
+              >
+                <span className="dashboard-tab__icon" aria-hidden="true">
+                  <i className={tab.icon} />
+                </span>
+                <span className="dashboard-tab__body">
+                  <span className="dashboard-tab__label">{tab.label}</span>
+                  <span className="dashboard-tab__description">{tab.description}</span>
+                </span>
+              </button>
+            )
+          })}
         </div>
-      </section>
-    </>
+
+        <div className="dashboard-search__panel" role="tabpanel">
+          {renderContent()}
+        </div>
+      </div>
+    </section>
   )
 }

@@ -6,7 +6,8 @@ export interface User {
   gender?: 'Male' | 'Female' | 'Other'
   birthYear?: number
   createdAt: string
-  updatedAt: string
+  updatedAt: string,
+  is_admin: boolean
 }
 export interface City {
   id: string

@@ -1,7 +1,6 @@
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
-// import { TravelService } from '@/services/travel.service'
 import { Button } from '@/components/ui/Button_dashboard'
 import { Input } from '@/components/ui/Input_dashboard'
 import { useToast } from '@/hooks/useToast'
@@ -24,7 +23,6 @@ export function Footer() {
     setIsSubscribing(true)
 
     try {
-      // await TravelService.subscribeNewsletter(email)
       success(language === 'vi' ? 'Đăng ký thành công!' : 'Successfully subscribed!')
       setEmail('')
     } catch (err) {
@@ -35,117 +33,99 @@ export function Footer() {
     }
   }
 
-  const getTimezoneDisplay = (timezone: string) => {
-    const timezoneMap: Record<string, string> = {
-      'Asia/Ho_Chi_Minh': '(GMT+7)',
-      'Asia/Bangkok': '(GMT+7)',
-      'America/New_York': '(GMT-4)',
-      'Europe/London': '(GMT+1)',
-      'Europe/Paris': '(GMT+2)'
-    }
-    
-    return `${timezone} ${timezoneMap[timezone] || ''}`
-  }
-
   return (
-    <footer id="contact" className="footer">
-      <div className="container mx-auto px-4">
-        <div className="footer-content">
-          {/* Contact */}
-          <div className="footer-section">
-            <h3>{language === 'vi' ? 'Liên Hệ' : 'Contact'}</h3>
+    <footer id="contact" className="dashboard-footer">
+      <div className="dashboard-footer__background" aria-hidden="true" />
+      <div className="dashboard-footer__inner">
+        <div className="dashboard-footer__grid">
+          <div className="dashboard-footer__column">
+            <span className="dashboard-footer__tag">
+              {language === 'vi' ? 'VietJourney' : 'VietJourney'}
+            </span>
+            <h3>
+              {language === 'vi'
+                ? 'Kết nối và khám phá Việt Nam theo cách của bạn.'
+                : 'Connect and discover Vietnam, your way.'}
+            </h3>
             <p>
               {language === 'vi'
                 ? 'Tòa nhà E3, 144 Xuân Thủy, Cầu Giấy, Hà Nội, Việt Nam.'
-                : 'E3 Building, 144 Xuan Thuy Street, Cau Giay District, Ha Noi, Vietnam.'
-              }
+                : 'E3 Building, 144 Xuan Thuy Street, Cau Giay District, Ha Noi, Vietnam.'}
             </p>
-            <p>hi@travelrecommender.com</p>
-          </div>
-          
-          {/* Company */}
-          <div className="footer-section">
-            <h3>{language === 'vi' ? 'Công Ty' : 'Company'}</h3>
-            <a href="#">
-              {language === 'vi' ? 'Về Chúng Tôi' : 'About Us'}
-            </a>
-            <br />
-            <a href="#">
-              {language === 'vi' ? 'Liên Hệ' : 'Contact Us'}
+            <a href="mailto:hi@travelrecommender.com" className="dashboard-footer__link">
+              hi@travelrecommender.com
             </a>
           </div>
-          
-          {/* Support */}
-          <div className="footer-section">
-            <h3>{language === 'vi' ? 'Hỗ Trợ' : 'Support'}</h3>
-            <a href="#">
-              {language === 'vi' ? 'Liên Lạc' : 'Get in Touch'}
-            </a>
-            <br />
-            <a href="#">
-              {language === 'vi' ? 'Trung tâm trợ giúp' : 'Help center'}
-            </a>
+
+          <div className="dashboard-footer__column">
+            <h4>{language === 'vi' ? 'Nền tảng' : 'Platform'}</h4>
+            <ul>
+              <li>
+                <a href="#dashboard-search" className="dashboard-footer__link">
+                  {language === 'vi' ? 'Trải nghiệm cá nhân hóa' : 'Tailored experiences'}
+                </a>
+              </li>
+              <li>
+                <a href="#dashboard-featured" className="dashboard-footer__link">
+                  {language === 'vi' ? 'Tour nổi bật' : 'Featured journeys'}
+                </a>
+              </li>
+            </ul>
           </div>
-          
-          {/* Newsletter */}
-          <div className="footer-section">
-            <h3>{language === 'vi' ? 'Bản Tin' : 'Newsletter'}</h3>
+
+          <div className="dashboard-footer__column">
+            <h4>{language === 'vi' ? 'Hỗ trợ' : 'Support'}</h4>
+            <ul>
+              <li>
+                <a href="#" className="dashboard-footer__link">
+                  {language === 'vi' ? 'Trung tâm trợ giúp' : 'Help center'}
+                </a>
+              </li>
+              <li>
+                <a href="#" className="dashboard-footer__link">
+                  {language === 'vi' ? 'Điều khoản & riêng tư' : 'Terms & privacy'}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="dashboard-footer__column">
+            <h4>{language === 'vi' ? 'Nhận bản tin' : 'Stay inspired'}</h4>
             <p>
               {language === 'vi'
-                ? 'Đăng ký nhận bản tin miễn phí và cập nhật thông tin'
-                : 'Subscribe to the free newsletter and stay up to date'
-              }
+                ? 'Nhận khoảnh khắc du lịch được cá nhân hóa mỗi tuần.'
+                : 'Receive curated travel moments every week.'}
             </p>
-            <form onSubmit={handleNewsletterSubmit} className="newsletter-form mt-4">
+            <form onSubmit={handleNewsletterSubmit} className="dashboard-footer__form">
               <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={language === 'vi' ? 'Địa chỉ email của bạn' : 'Your email address'}
-                className="newsletter-input flex-1"
+                placeholder={language === 'vi' ? 'Email của bạn' : 'Your email'}
+                className="dashboard-footer__input"
               />
               <Button 
                 type="submit" 
                 isLoading={isSubscribing}
-                className="newsletter-btn"
-                size="sm"
+                className="dashboard-footer__button"
               >
-                {language === 'vi' ? 'Gửi' : 'Send'}
+                {language === 'vi' ? 'Đăng ký' : 'Subscribe'}
               </Button>
             </form>
-            
-            <div className="mt-4">
-              <h4 className="text-white mb-2">
-                {language === 'vi' ? 'Theo Dõi Chúng Tôi' : 'Follow Us'}
-              </h4>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <i className="fab fa-facebook-f"></i>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <i className="fab fa-twitter"></i>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <i className="fab fa-instagram"></i>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white">
-                  <i className="fab fa-youtube"></i>
-                </a>
-              </div>
+            <div className="dashboard-footer__social">
+              <a href="#" aria-label="Facebook"><i className="fab fa-facebook-f" /></a>
+              <a href="#" aria-label="Instagram"><i className="fab fa-instagram" /></a>
+              <a href="#" aria-label="YouTube"><i className="fab fa-youtube" /></a>
             </div>
           </div>
         </div>
-        
-        <div className="footer-bottom">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <p>
-              {language === 'vi'
-                ? '© 2025 Travel Recommender. Bảo lưu mọi quyền.'
-                : '© 2025 Travel Recommender. All right reserved.'
-              }
-            </p>
-            
-          </div>
+        <div className="dashboard-footer__bottom">
+          <p>
+            {language === 'vi'
+              ? '© 2025 VietJourney. Bảo lưu mọi quyền.'
+              : '© 2025 VietJourney. All rights reserved.'}
+          </p>
+          <span>{language === 'vi' ? 'Thiết kế đồng bộ với trải nghiệm Welcome.' : 'Design aligned with the Welcome experience.'}</span>
         </div>
       </div>
     </footer>

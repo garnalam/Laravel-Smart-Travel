@@ -1,100 +1,128 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuthStore } from '@/store/useAuthStore'
 import { useAppStore } from '@/store/useAppStore'
-export function Navbar() {
-  const { user, logout } = useAuthStore()
-  const { currency, language } = useAppStore()
+import { router } from '@inertiajs/react'
+
+interface NavbarProps {
+  appearance?: 'glass' | 'solid'
+}
+
+export function Navbar({ appearance = 'solid' }: NavbarProps) {
+  const { user } = useAuthStore()
+  const { language } = useAppStore()
   const [showAuthDropdown, setShowAuthDropdown] = useState(false)
 
-  // Check admin status when authentication state changes
+  const containerClasses = useMemo(() => {
+    if (appearance === 'glass') {
+      return 'navbar glass'
+    }
+    return 'navbar solid'
+  }, [appearance])
+
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      // Only check admin if user is authenticated
-      if (!user) {
-        return
+    if (!showAuthDropdown) {
+      return
+    }
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.auth-dropdown')) {
+        setShowAuthDropdown(false)
       }
+    }
 
-      try {
-        // Call backend directly to avoid Next.js rewrite loop
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
-        const res = await fetch(`${apiUrl}/api/check-admin`, {
-          credentials: "include",
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json',
-            // Add auth token if available
-            ...(user && 'Authorization' in localStorage && {
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            })
-          }
-        });
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showAuthDropdown])
 
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const data = await res.json();
-        console.log('Admin check result:', data);
-
-
-      } catch (e) {
-        console.error('Admin check failed:', e);
-      } finally {
-      }
-    };
-
-    checkAdminStatus();
-  }, [user]) // Re-run when auth state changes
-  const handleAuthClick = (mode: 'login' | 'register') => {
-    setShowAuthDropdown(false)
-  }
-
-  const handleLogout = async () => {
-    await logout()
+  const handleLogout = () => {
+    router.post('/logout')
     setShowAuthDropdown(false)
   }
 
   return (
-    <>
-      <nav className="navbar py-4 px-6" style={{ backgroundColor: 'rgba(255, 255, 255)' }}>
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-blue-600">
-              {language === 'vi' ? 'Việt Nam - Du Lịch Cá Nhân' : 'Vietnam - Personalized Travel'}
-            </h1>
-          </div>
+    <header className="navbar-wrapper">
+      <nav className={containerClasses}>
+        <div className="navbar__inner">
+          <a className="navbar__brand" href="/">
+            <span className="navbar__brand-tag">{language === 'vi' ? 'VietJourney' : 'VietJourney'}</span>
+            <span className="navbar__brand-title">
+              {language === 'vi'
+                ? 'Bản đồ trải nghiệm Việt Nam'
+                : 'Mapping Vietnam experiences'}
+            </span>
+          </a>
 
-          <div className="hidden md:flex items-center space-x-6">
-            <a href="#" className="font-medium text-gray-700 hover:text-blue-600 transition duration-300">
+          <div className="navbar__links">
+            <a href="/" className="navbar__link">
               {language === 'vi' ? 'Trang chủ' : 'Home'}
             </a>
-            <a href="#tours" className="font-medium text-gray-700 hover:text-blue-600 transition duration-300">
-              {language === 'vi' ? 'Tour' : 'Tours'}
-            </a>
+            
+            {user && (
+              <>
+                <a href="#dashboard-search" className="navbar__link">
+                  {language === 'vi' ? 'Tùy chỉnh' : 'Personalize'}
+                </a>
+                <a href="#dashboard-featured" className="navbar__link">
+                  {language === 'vi' ? 'Tour nổi bật' : 'Highlights'}
+                </a>
+              </>
+            )}
 
-            <a href="#contact" className="font-medium text-gray-700 hover:text-blue-600 transition duration-300">
+            <a href="#contact" className="navbar__link">
               {language === 'vi' ? 'Liên hệ' : 'Contact'}
             </a>
+          </div>
 
-            <div className="auth-dropdown">
-              <button
-                onClick={() => setShowAuthDropdown(!showAuthDropdown)}
-                className="font-medium text-gray-700 hover:text-blue-600 transition duration-300 flex items-center">
-                <span>{user?.name}</span>
-                <i className="fas fa-chevron-down ml-1 text-xs"></i>
-              </button>
-              <div className={`auth-dropdown-content ${showAuthDropdown ? 'active' : ''}`}>
-                <a href="/profile">
-                  {language === 'vi' ? 'Hồ sơ' : 'Profile'}
-                </a>
-                <button onClick={handleLogout} className="w-full text-left p-2 hover:bg-gray-200 rounded-md">
-                  {language === 'vi' ? 'Đăng xuất' : 'Logout'}
+          <div className="navbar__actions">
+            {user ? (
+              // Logic khi đã đăng nhập (user = true)
+              <div className="auth-dropdown">
+                <button
+                  onClick={() => setShowAuthDropdown((prev) => !prev)}
+                  className="navbar__user"
+                >
+                  <span className="navbar__user-avatar" aria-hidden="true">
+                    {user.name?.slice(0, 2).toUpperCase()}
+                  </span>
+                  <span className="navbar__user-name">{user.name}</span>
+                  <i className={`fas fa-chevron-${showAuthDropdown ? 'up' : 'down'} text-xs`} aria-hidden="true" />
+                  <span className="sr-only">
+                    {language === 'vi' ? 'Mở menu tài khoản' : 'Open account menu'}
+                  </span>
                 </button>
+                
+                {/* ===== BẮT ĐẦU THAY ĐỔI ===== */}
+                <div className={`auth-dropdown-content ${showAuthDropdown ? 'active' : ''}`}>
+                  
+                  {/* Chỉ hiển thị link này nếu user.is_admin là true */}
+                  {user.is_admin && (
+                    <a href="/admin"> {/* <-- Đổi route '/admin' nếu cần */}
+                      {language === 'vi' ? 'Trang Admin' : 'Admin Panel'}
+                    </a>
+                  )}
+
+                  {/* Nút Đăng xuất luôn hiển thị */}
+                  <button onClick={handleLogout} className="auth-dropdown__logout">
+                    {language === 'vi' ? 'Đăng xuất' : 'Logout'}
+                  </button>
+                </div>
+                {/* ===== KẾT THÚC THAY ĐỔI ===== */}
+
               </div>
-            </div>
+            ) : (
+              // Logic khi chưa đăng nhập (user = false)
+              <div className="navbar__auth">
+                <a href="/login" className="navbar__auth-link">
+                  {language === 'vi' ? 'Đăng nhập' : 'Login'}
+                </a>
+                <a href="/register" className="navbar__auth-button">
+                  {language === 'vi' ? 'Bắt đầu' : 'Get started'}
+                </a>
+              </div>
+            )}
           </div>
         </div>
       </nav>
-    </>
+    </header>
   )
 }
