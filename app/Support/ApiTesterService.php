@@ -71,38 +71,34 @@ class ApiTesterService
             
             // Lấy giá trị mẫu dựa trên mode để test
             switch ($mode) {
-case 'list':
-          case 'cartesian':
-                $rawValues = $def['values'] ?? $def['values_cartesian'] ?? null;
-                
-                if (is_string($rawValues)) {
-                    // MỚI: Xử lý trường hợp $rawValues là string (từ Textarea)
-                    $lines = array_filter(preg_split("/\r\n|\n|\r/", $rawValues));
-                    if (count($lines) > 0) {
-                        $testValue = $lines[0]; // Lấy dòng đầu tiên
+                case 'list':
+                case 'cartesian':
+                    $rawValues = $def['values'] ?? $def['values_cartesian'] ?? null;
+                    
+                    if (is_string($rawValues)) {
+                        // MỚI: Xử lý trường hợp $rawValues là string (từ Textarea)
+                        $lines = array_filter(preg_split("/\r\n|\n|\r/", $rawValues));
+                        if (count($lines) > 0) {
+                            $testValue = $lines[0]; // Lấy dòng đầu tiên
+                        }
+                    } elseif (is_array($rawValues) && count($rawValues) > 0) {
+                        // CŨ: Xử lý trường hợp $rawValues là mảng (từ DB)
+                        $testValue = $rawValues[0];
                     }
-                } elseif (is_array($rawValues) && count($rawValues) > 0) {
-                    // CŨ: Xử lý trường hợp $rawValues là mảng (từ DB)
-                    $testValue = $rawValues[0];
-                }
-                break;
+                    break;
 
                 case 'template':
                     $testValue = $def['template'] ?? null;
-                    // Đối với template, chúng ta chỉ gửi template string để API ngoài xử lý (nếu có thể)
-                    // Nếu không, chúng ta có thể đặt một giá trị mẫu:
                     if ($testValue && Str::contains($testValue, ['{{', '}}'])) {
-                         $testValue = 'test_template_value'; // Giả lập giá trị để không bị lỗi Missing Param
+                        $testValue = 'test_template_value'; // Giả lập giá trị
                     }
                     break;
                 
                 case 'dynamic':
-                    // Đối với dynamic (date range, id), chúng ta sử dụng một giá trị mẫu an toàn
                     $testValue = 'test_dynamic_value'; 
                     break;
                 
                 default:
-                    // Mặc định hoặc mode không xác định
                     break;
             }
             
@@ -113,16 +109,28 @@ case 'list':
         // --- KẾT THÚC CHUẨN HÓA PARAMETERS ---
 
         // --- 3. TÁCH BASE URL và LỌC PARAMETERS LIVEWIRE ---
-        // Sử dụng strtok để loại bỏ triệt để bất kỳ query string nào còn sót lại.
         $finalUrl = strtok($url, '?');
         
         // --- 4. GỌI HTTP YÊU CẦU ---
         try {
-            $pendingRequest = Http::timeout(30)->withHeaders($requestHeaders);
+            
+            // ============== BẮT ĐẦU SỬA LỖI SSL (Cách 2 - An toàn) ==============
+            
+            // 1. Xác định đường dẫn đến file certificate
+            $caBundlePath = storage_path('app/cacert.pem');
+
+            // 2. Tạo $pendingRequest với tùy chọn 'verify'
+            $pendingRequest = Http::withOptions([
+                'verify' => $caBundlePath
+            ])
+            ->timeout(30)
+            ->withHeaders($requestHeaders);
+            
+            // ============== KẾT THÚC SỬA LỖI SSL ==============
 
             // Chỉ gọi withBasicAuth nếu Basic Auth được chọn
             if ($basicAuthUser !== null) {
-                 $pendingRequest->withBasicAuth($basicAuthUser, $basicAuthPass);
+                $pendingRequest->withBasicAuth($basicAuthUser, $basicAuthPass);
             }
             
             // Xây dựng tham số Query và JSON
@@ -139,7 +147,6 @@ case 'list':
             $body = $response->body(); 
 
             if ($response->failed()) {
-                // DEBUGGING: Thêm thông tin URL và Params
                 $queryString = http_build_query($queryData);
                 $debugInfo = " | FINAL URL GỬI ĐI: " . $finalUrl . ($queryString ? ('?' . $queryString) : '');
                 $debugInfo .= " | PARAMS ĐÃ GỬI: " . json_encode($queryData);
@@ -168,6 +175,7 @@ case 'list':
                 'body' => $e->response?->body(),
             ];
         } catch (\Throwable $e) {
+            // Lỗi "cURL error 60" sẽ bị bắt ở đây nếu 'verify' bị lỗi
             return [
                 'success' => false,
                 'status' => 500,
