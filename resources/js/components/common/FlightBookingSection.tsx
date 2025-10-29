@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/useToast'
 import { router } from '@inertiajs/react'
 import { useTourStorage } from '@/hooks/useTourStorage'
 import '../../../css/dashboard.css'
-
+import { useEffect } from 'react'
 interface FlightBookingSectionProps {
   tourData: Partial<DataTour>
   onBack: () => void
@@ -24,44 +24,40 @@ interface Flight {
   price: number
 }
 
-const mockFlights: Flight[] = [
-  {
-    id: 1,
-    airline: 'Vietnam Airlines',
-    airlineCode: 'VN',
-    departTime: '09:15',
-    arriveTime: '11:30',
-    departCode: 'SGN',
-    arriveCode: 'HAN',
-    duration: '2h15m',
-    type: 'Direct',
-    price: 95.0,
-  },
-  {
-    id: 2,
-    airline: 'VietJet Air',
-    airlineCode: 'VJ',
-    departTime: '14:20',
-    arriveTime: '17:05',
-    departCode: 'SGN',
-    arriveCode: 'HAN',
-    duration: '2h45m',
-    type: 'Direct',
-    price: 120.0,
-  },
-  {
-    id: 3,
-    airline: 'Bamboo Airways',
-    airlineCode: 'QH',
-    departTime: '08:00',
-    arriveTime: '10:50',
-    departCode: 'SGN',
-    arriveCode: 'HAN',
-    duration: '2h50m',
-    type: 'Direct',
-    price: 110.0,
-  },
-]
+// Transform API response format into Flight[]
+function parseFlightsFromApiResponse(apiResponse: any): Flight[] {
+  if (!apiResponse || !apiResponse.success || !apiResponse.data) return []
+  const groups = apiResponse.data as Record<string, any[]>
+  const flights: Flight[] = []
+  let idCounter = 1
+  Object.keys(groups).forEach((airlineName) => {
+    const list = Array.isArray(groups[airlineName]) ? groups[airlineName] : []
+    list.forEach((item) => {
+      const departDate = new Date(item.dep_time)
+      const arriveDate = new Date(item.arr_time)
+      const diffMs = Math.max(0, arriveDate.getTime() - departDate.getTime())
+      const hours = Math.floor(diffMs / (1000 * 60 * 60))
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+      const duration = `${hours}h${minutes.toString().padStart(2, '0')}m`
+      const stopsCount = Array.isArray(item.stops) ? item.stops.length : 0
+      const type = stopsCount === 0 ? 'Direct' : `${stopsCount} stop${stopsCount > 1 ? 's' : ''}`
+      const airlineCode = typeof item.flight_code === 'string' ? item.flight_code.replace(/\d+.*/, '') : ''
+      flights.push({
+        id: idCounter++,
+        airline: item.airline || airlineName,
+        airlineCode,
+        departTime: new Date(item.dep_time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+        arriveTime: new Date(item.arr_time).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+        departCode: item.dep_iata || '',
+        arriveCode: item.arr_iata || '',
+        duration,
+        type,
+        price: Number(item.price) || 0,
+      })
+    })
+  })
+  return flights
+}
 
 export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionProps) {
   const { language } = useAppStore()
@@ -73,6 +69,10 @@ export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionP
   const [selectedDepartureFlight, setSelectedDepartureFlight] = useState<Flight | null>(null)
   const [selectedReturnFlight, setSelectedReturnFlight] = useState<Flight | null>(null)
   const [isSummaryOpen, setIsSummaryOpen] = useState(true)
+  const [loadingOutbound, setLoadingOutbound] = useState(false)
+  const [loadingReturn, setLoadingReturn] = useState(false)
+  const [outboundFlights, setOutboundFlights] = useState<Flight[]>([])
+  const [returnFlights, setReturnFlights] = useState<Flight[]>([])
 
   const calculateDays = (departureDate: string, arrivalDate: string) => {
     if (!departureDate || !arrivalDate) return 0
@@ -84,12 +84,102 @@ export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionP
     return diffDays + 1
   }
 
+  useEffect(() => {
+    if (!tourData.departure || !tourData.destination || !tourData.departureDate) return
+    const data_outbound = {
+      departure_city: tourData.departure,
+      arrival_city: tourData.destination,
+      departure_date: tourData.departureDate,
+    }
+    const data_return = {
+      departure_city: tourData.destination,
+      arrival_city: tourData.departure,
+      departure_date: tourData.arrivalDate,
+    }
+    console.log('data_outbound:', data_outbound)
+    console.log('data_return:', data_return)
+    setLoadingOutbound(true)
+    fetch("/api/flight/search", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data_outbound),
+    })
+      .then(async (response) => {
+        console.log('📡 Response status:', response.status, response.statusText)
+        let json
+        try {
+          json = await response.json()
+        } catch (e) {
+          console.warn('⚠️ Could not parse JSON response')
+          throw new Error('Invalid JSON response')
+        }
+        console.log('🔍 Response JSON:', json)
+        return json
+      })
+      .then((data) => {
+        if (data.success) {
+          const flights = parseFlightsFromApiResponse(data)
+          setOutboundFlights(flights)
+          success('Flight search success')
+        } else {
+          console.error('❌ Flight search error:', data.error)
+          error(data.error || 'Flight search failed')
+        }
+      })
+      .catch((err) => {
+        console.error('🌩️ Network/Unexpected error fetching flights:', err)
+        error('Network error while searching flights')
+      })
+      .finally(() => setLoadingOutbound(false))
+
+    if (!tourData.arrivalDate) return
+    setLoadingReturn(true)
+    fetch("/api/flight/search", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(data_return),
+    })
+      .then(async (response) => {
+        console.log('📡 Response status:', response.status, response.statusText)
+        let json
+        try {
+          json = await response.json()
+        } catch (e) {
+          console.warn('⚠️ Could not parse JSON response')
+          throw new Error('Invalid JSON response')
+        }
+        console.log('🔍 Response JSON:', json)
+        return json
+      })
+      .then((data) => {
+        if (data.success) {
+          const flights = parseFlightsFromApiResponse(data)
+          setReturnFlights(flights)
+          success('Flight search success')
+        } else {
+          console.error('❌ Flight search error:', data.error)
+          error(data.error || 'Flight search failed')
+        }
+      })
+      .catch((err) => {
+        console.error('🌩️ Network/Unexpected error fetching flights:', err)
+        error('Network error while searching flights')
+      })
+      .finally(() => setLoadingReturn(false))
+  }, [tourData])
+
   const handleSubmit = () => {
     if (!selectedDepartureFlight || !selectedReturnFlight) {
       error(language === 'vi' ? 'Vui lòng chọn cả chuyến bay đi và về' : 'Please select both departure and return flights')
       return
     }
-
+    
     const totalPrice = selectedDepartureFlight.price + selectedReturnFlight.price
     const departureDate = tourData.departureDate || ''
     const arrivalDate = tourData.arrivalDate || ''
@@ -195,7 +285,11 @@ export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionP
 
               {isDepartureFlightOpen && (
                 <div className="flight-booking__card-body">
-                  {mockFlights.map((flight) => (
+                  {loadingOutbound && <p>{language === 'vi' ? 'Đang tải chuyến bay...' : 'Loading flights...'}</p>}
+                  {!loadingOutbound && outboundFlights.length === 0 && (
+                    <p className="flight-booking__summary-empty">{language === 'vi' ? 'Không có chuyến bay phù hợp' : 'No matching flights found'}</p>
+                  )}
+                  {!loadingOutbound && outboundFlights.map((flight) => (
                     <div
                       key={flight.id}
                       className={`flight-booking__flight ${
@@ -268,7 +362,11 @@ export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionP
 
               {isReturnFlightOpen && (
                 <div className="flight-booking__card-body">
-                  {mockFlights.map((flight) => (
+                  {loadingReturn && <p>{language === 'vi' ? 'Đang tải chuyến bay...' : 'Loading flights...'}</p>}
+                  {!loadingReturn && returnFlights.length === 0 && (
+                    <p className="flight-booking__summary-empty">{language === 'vi' ? 'Không có chuyến bay phù hợp' : 'No matching flights found'}</p>
+                  )}
+                  {!loadingReturn && returnFlights.map((flight) => (
                     <div
                       key={flight.id}
                       className={`flight-booking__flight ${

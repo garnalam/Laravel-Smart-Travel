@@ -83,23 +83,23 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
   // 6. Tạo các hàm setter được memoize để truyền cho GuestCounter
   const setAdults = useCallback((value: number | ((prev: number) => number)) => {
     setFormData(prev => ({
-        ...prev,
-        adults: typeof value === 'function' ? value(prev.adults ?? 0) : value
+      ...prev,
+      adults: typeof value === 'function' ? value(prev.adults ?? 0) : value
     }))
   }, [])
 
   const setChildren = useCallback((value: number | ((prev: number) => number)) => {
-      setFormData(prev => ({
-          ...prev,
-          children: typeof value === 'function' ? value(prev.children ?? 0) : value
-      }))
+    setFormData(prev => ({
+      ...prev,
+      children: typeof value === 'function' ? value(prev.children ?? 0) : value
+    }))
   }, [])
 
   const setInfants = useCallback((value: number | ((prev: number) => number)) => {
-      setFormData(prev => ({
-          ...prev,
-          infants: typeof value === 'function' ? value(prev.infants ?? 0) : value
-      }))
+    setFormData(prev => ({
+      ...prev,
+      infants: typeof value === 'function' ? value(prev.infants ?? 0) : value
+    }))
   }, [])
 
   useEffect(() => {
@@ -138,26 +138,24 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
       return language === 'vi' ? 'Thêm hành khách' : 'Add guests'
     }
 
-    const guestLabel = `${totalGuests} ${
-      totalGuests > 1
-        ? language === 'vi'
-          ? 'khách'
-          : 'guests'
-        : language === 'vi'
-          ? 'khách'
-          : 'guest'
-    }`
+    const guestLabel = `${totalGuests} ${totalGuests > 1
+      ? language === 'vi'
+        ? 'khách'
+        : 'guests'
+      : language === 'vi'
+        ? 'khách'
+        : 'guest'
+      }`
     const infantLabel =
       numInfants > 0
-        ? `, ${numInfants} ${
-            numInfants > 1
-              ? language === 'vi'
-                ? 'trẻ nhỏ'
-                : 'infants'
-              : language === 'vi'
-                ? 'trẻ nhỏ'
-                : 'infant'
-          }`
+        ? `, ${numInfants} ${numInfants > 1
+          ? language === 'vi'
+            ? 'trẻ nhỏ'
+            : 'infants'
+          : language === 'vi'
+            ? 'trẻ nhỏ'
+            : 'infant'
+        }`
         : ''
 
     return `${guestLabel}${infantLabel}`
@@ -200,16 +198,11 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
         departureDate,
         arrivalDate,
       }
-      
-      console.log('🟡 [TravelSearchForm] handleSubmit - Kiểm tra callback:', {
-        hasCallback: !!onShowFlightBooking,
-        callbackType: typeof onShowFlightBooking,
-        willUseCallback: !!onShowFlightBooking
-      })
-      
+
+
       if (onShowFlightBooking) {
         // Use callback instead of routing
-        console.log('🟡 [TravelSearchForm] Đang gọi callback với data:', dataToSend)
+
         onShowFlightBooking(dataToSend)
         success(
           language === 'vi'
@@ -290,7 +283,7 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
 
   return (
     <section className="travel-search">
-        {/* ... (Phần header không đổi) ... */}
+      {/* ... (Phần header không đổi) ... */}
       <div className="travel-search__halo" aria-hidden="true" />
       <div className="travel-search__inner">
         <header className="travel-search__header">
@@ -386,25 +379,25 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
               />
             </div>
 
-              <Button
+            <Button
 
-                onClick={handleSubmit}
+              onClick={handleSubmit}
 
-                isLoading={isLoading}
+              isLoading={isLoading}
 
-                disabled={isLoading}
+              disabled={isLoading}
 
-                className="travel-search__button"
+              className="travel-search__button"
 
-              >
+            >
 
-                {language === 'vi' ? 'Tạo lịch trình' : 'Build itinerary'}
+              {language === 'vi' ? 'Tạo lịch trình' : 'Build itinerary'}
 
-              </Button>
+            </Button>
           </div>
 
           <div className="travel-search__card travel-search__card--secondary">
-          {/* ... (Phần header Card 2 không đổi) ... */}
+            {/* ... (Phần header Card 2 không đổi) ... */}
             <div className="travel-search__card-header">
               <span className="travel-search__card-step">
                 {language === 'vi' ? 'Mốc 02' : 'Chapter 02'}
@@ -422,28 +415,28 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
             </div>
 
             <div className="travel-search__grid travel-search__grid--two travel-search__grid--balanced">
-              
+
               {/* 11. BẮT ĐẦU THAY THẾ CHO INPUTNUMBER */}
               <div className="travel-search__field dashboard-form__field">
                 <label className="dashboard-form__label">
                   {language === 'vi' ? 'Ngân sách mong muốn' : 'Preferred budget'}
                 </label>
-<NumericFormat
-    customInput={InputText}
-    className="dashboard-form__prime"
-    placeholder={language === 'vi' ? 'Nhập ngân sách...' : 'Enter your budget...'}
-    value={formData.budget || ''}
-    
-    // THÊM KIỂU DỮ LIỆU TẠI ĐÂY
-    onValueChange={(values: NumberFormatValues) => { 
-      setFormData((prev) => ({ ...prev, budget: values.floatValue || 0 }))
-    }}
-    
-    thousandSeparator={language === 'vi' ? '.' : ','}
-    decimalSeparator={language === 'vi' ? ',' : '.'}
-    suffix={currency === 'VND' ? ' ₫' : (currency === 'USD' ? ' $' : ` ${currency}`)}
-    allowNegative={false}
-/>
+                <NumericFormat
+                  customInput={InputText}
+                  className="dashboard-form__prime"
+                  placeholder={language === 'vi' ? 'Nhập ngân sách...' : 'Enter your budget...'}
+                  value={formData.budget || ''}
+
+                  // THÊM KIỂU DỮ LIỆU TẠI ĐÂY
+                  onValueChange={(values: NumberFormatValues) => {
+                    setFormData((prev) => ({ ...prev, budget: values.floatValue || 0 }))
+                  }}
+
+                  thousandSeparator={language === 'vi' ? '.' : ','}
+                  decimalSeparator={language === 'vi' ? ',' : '.'}
+                  suffix={currency === 'VND' ? ' ₫' : (currency === 'USD' ? ' $' : ` ${currency}`)}
+                  allowNegative={false}
+                />
               </div>
               {/* KẾT THÚC THAY THẾ */}
 
@@ -463,7 +456,7 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
                   </button>
                   {isGuestOpen && (
                     <GuestCounter
-                        // 13. Đọc state từ formData và truyền hàm setter mới
+                      // 13. Đọc state từ formData và truyền hàm setter mới
                       adults={formData.adults ?? 0}
                       setAdults={setAdults}
                       children={formData.children ?? 0}
@@ -499,7 +492,7 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
               </div>
             </div>
 
-            
+
           </div>
         </div>
       </div>
