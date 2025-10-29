@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { DataTour } from '@/types/domain'
 import { useToast } from '@/hooks/useToast'
@@ -9,6 +9,10 @@ import { useEffect } from 'react'
 interface FlightBookingSectionProps {
   tourData: Partial<DataTour>
   onBack: () => void
+  onConfirm?: (data: Partial<DataTour> & {
+    selectedDepartureFlight: Flight
+    selectedReturnFlight: Flight
+  }) => void
 }
 
 interface Flight {
@@ -59,7 +63,7 @@ function parseFlightsFromApiResponse(apiResponse: any): Flight[] {
   return flights
 }
 
-export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionProps) {
+export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBookingSectionProps) {
   const { language } = useAppStore()
   const { success, error } = useToast()
   const { saveFlightData } = useTourStorage()
@@ -225,7 +229,16 @@ export function FlightBookingSection({ tourData, onBack }: FlightBookingSectionP
     })
 
     success(language === 'vi' ? 'Đặt vé thành công!' : 'Booking successful!')
-    router.post('/tour/preferences', updatedFormData)
+
+    if (onConfirm) {
+      onConfirm({
+        ...updatedFormData,
+        selectedDepartureFlight,
+        selectedReturnFlight,
+      })
+    } else {
+      router.post('/tour/preferences', updatedFormData)
+    }
   }
 
   const totalPrice = useMemo(() => {

@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore'
 import { SearchSection } from '@/components/common/SearchSection'
 import { Footer } from '@/components/common/Footer'
 import { FlightBookingSection } from '@/components/common/FlightBookingSection'
+import PreferencesSection from '@/components/common/PreferencesSection'
 import { DataTour } from '@/types/domain'
 
 export function JourneyGuideSection() {
@@ -44,36 +45,6 @@ export function JourneyGuideSection() {
   ]
 
   // Dữ liệu này đang không được sử dụng, bạn có thể xóa nếu muốn
-  const timeline = [
-    {
-      label: language === 'vi' ? 'Chọn dịch vụ' : 'Pick a service',
-      detail:
-        language === 'vi'
-          ? 'Tour cá nhân, khách sạn, vé máy bay, gói trọn hay dịch vụ ẩm thực.'
-          : 'Personal tours, hotels, flights, bundles or culinary services.',
-    },
-    {
-      label: language === 'vi' ? 'Nhập thông tin & gửi' : 'Fill details & submit',
-      detail:
-        language === 'vi'
-          ? 'Bộ form thu thập điểm đến, thời gian, ngân sách, khách tham gia.'
-          : 'Forms capture destination, schedule, budget and travel party.',
-    },
-    {
-      label: language === 'vi' ? 'Xem kết quả đề xuất' : 'Review tailored proposals',
-      detail:
-        language === 'vi'
-          ? 'Hệ thống trả về đề xuất phù hợp để bạn chỉnh sửa trong bảng điều khiển.'
-          : 'System presents the tailored proposal ready for fine-tuning in the dashboard.',
-    },
-    {
-      label: language === 'vi' ? 'Khóa lịch & đồng bộ' : 'Lock itinerary & sync',
-      detail:
-        language === 'vi'
-          ? 'Xác nhận lịch cuối cùng, đồng bộ cùng đội ngũ hỗ trợ và chia sẻ cho khách.'
-          : 'Confirm the final plan, sync with support teams and share with travellers.',
-    },
-  ]
 
   return (
     <section className="dashboard-journey" id="journey-guide">
@@ -122,30 +93,50 @@ export function JourneyGuideSection() {
   )
 }
 
+interface DashboardPreferencesProps {
+  initialTourData: Partial<DataTour>
+  onBack: () => void
+}
+
+function DashboardPreferencesSection({ initialTourData, onBack }: DashboardPreferencesProps) {
+  return <PreferencesSection initialTourData={initialTourData} mode="dashboard" onBack={onBack} />
+}
+
 export default function DashboardPage() {
   const { language } = useAppStore()
   const [showFlightBooking, setShowFlightBooking] = useState(false)
+  const [showPreferences, setShowPreferences] = useState(false)
   const [tourData, setTourData] = useState<Partial<DataTour>>({})
 
   const handleShowFlightBooking = (data: Partial<DataTour>) => {
-    // console.log('🔵 [Dashboard] handleShowFlightBooking được gọi với data:', data)
-
-    
     setTourData(data)
+    setShowPreferences(false)
     setShowFlightBooking(true)
-    
-    // Scroll to flight booking section
-    setTimeout(() => {
+
+    requestAnimationFrame(() => {
       const element = document.querySelector('.flight-booking')
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }
-    }, 100)
+    })
+  }
+
+  const handleFlightConfirmed = (data: Partial<DataTour>) => {
+    setTourData(data)
+    setShowFlightBooking(false)
+    setShowPreferences(true)
+
+    requestAnimationFrame(() => {
+      const element = document.querySelector('#dashboard-preferences')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    })
   }
 
   const handleBackToDashboard = () => {
     setShowFlightBooking(false)
-    // Scroll back to search section
+    setShowPreferences(false)
     setTimeout(() => {
       const element = document.querySelector('.dashboard-search')
       if (element) {
@@ -166,9 +157,17 @@ export default function DashboardPage() {
         {/* console.log('🔵 [Dashboard] Đang render SearchSection với callback:', !!handleShowFlightBooking) */}
         
         {showFlightBooking && (
-          <FlightBookingSection tourData={tourData} onBack={handleBackToDashboard} />
+          <FlightBookingSection
+            tourData={tourData}
+            onBack={handleBackToDashboard}
+            onConfirm={handleFlightConfirmed}
+          />
         )}
-        
+
+        {showPreferences && (
+          <DashboardPreferencesSection initialTourData={tourData} onBack={handleBackToDashboard} />
+        )}
+
         <JourneyGuideSection />
         <section id="dashboard-history" className="dashboard-history">
           <div className="dashboard-history__halo" aria-hidden="true" />
