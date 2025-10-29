@@ -106,19 +106,21 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     saveTourData,
     saveDayPreferences,
     getDayPreferences,
+    saveDaySchedule,
     getAllDaySchedules,
-    getDateForDay,
   } = useTourStorage()
 
   const [formData, setFormData] = useState<Partial<DataTour>>(() => {
     return initialTourData && Object.keys(initialTourData).length > 0 ? initialTourData : storedTourData || {}
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingFinal, setIsGeneratingFinal] = useState(false)
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [categories, setCategories] = useState<CategorySection[]>([])
   const [isSummaryOpen, setIsSummaryOpen] = useState(true)
   const [currentDay, setCurrentDay] = useState<number>(1)
-
-  const daySchedules = useMemo(() => getAllDaySchedules(), [getAllDaySchedules])
+  const [daySchedules, setDaySchedules] = useState(() => getAllDaySchedules())
 
   const ensureTourData = (data: Partial<DataTour> | null | undefined) => {
     if (!data) return
@@ -284,6 +286,10 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     })
   }
 
+  const refreshDaySchedules = () => {
+    setDaySchedules(getAllDaySchedules())
+  }
+
   const persistPreferences = (cats: CategorySection[]) => {
     const preferencesData = cats.map((cat) => ({
       title: cat.title,
@@ -344,6 +350,14 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
 
   const currentTourDays = formData.days || 1
   const selectedDaySchedule = useMemo(() => daySchedules[currentDay], [daySchedules, currentDay])
+  const totalDays = formData.days || 1
+  const allDaysCompleted = useMemo(() => {
+    if (!totalDays) return false
+    for (let day = 1; day <= totalDays; day += 1) {
+      if (!daySchedules[day]) return false
+    }
+    return totalDays > 0
+  }, [daySchedules, totalDays])
 
   const formatCost = (value: number | string | undefined) => {
     const numeric = typeof value === 'string' ? parseFloat(value) : value || 0
@@ -377,7 +391,7 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     return categories.reduce((sum, cat) => sum + cat.items.filter((item) => item.disliked).length, 0)
   }, [categories])
 
-  const handleContinue = () => {
+  const buildSchedulePayload = () => {
     const likedItems = categories.flatMap((cat) =>
       cat.items
         .filter((item) => item.liked)
@@ -404,6 +418,65 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         }))
     )
 
+    return {
+      likedItems,
+      dislikedItems,
+      payload: {
+        currentDay,
+        budget: formData.budget || 0,
+        passengers: formData.passengers || 0,
+        restaurants: categories
+          .filter((cat) => cat.title === 'Restaurants')
+          .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
+        hotels: categories
+          .filter((cat) => cat.title === 'Hotels')
+          .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
+        activities: categories
+          .filter((cat) => cat.title === 'Recreation Places')
+          .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
+        transport: categories
+          .filter((cat) => cat.title === 'Local Transport')
+          .flatMap((cat) => cat.items.map((item) => item.name || '')),
+        disliked_restaurants: dislikedItems
+          .filter((item) => item.type === 'restaurants')
+          .map((item) => item.place_id?.toString() || ''),
+        disliked_hotels: dislikedItems
+          .filter((item) => item.type === 'hotels')
+          .map((item) => item.place_id?.toString() || ''),
+        disliked_activities: dislikedItems
+          .filter((item) => item.type === 'recreation_places')
+          .map((item) => item.place_id?.toString() || ''),
+        disliked_transport: dislikedItems
+          .filter((item) => item.type === 'local_transport')
+          .map((item) => item.name?.toString() || ''),
+        liked_restaurants: likedItems
+          .filter((item) => item.type === 'restaurants')
+          .map((item) => item.place_id?.toString() || ''),
+        liked_hotels: likedItems
+          .filter((item) => item.type === 'hotels')
+          .map((item) => item.place_id?.toString() || ''),
+        liked_activities: likedItems
+          .filter((item) => item.type === 'recreation_places')
+          .map((item) => item.place_id?.toString() || ''),
+        liked_transport: likedItems
+          .filter((item) => item.type === 'local_transport')
+          .map((item) => item.name?.toString() || ''),
+        destination: formData.destination,
+        departure: formData.departure,
+        budget_total: formData.budget,
+        passengers_total: formData.passengers,
+        city_id: formData.city_id,
+        days: formData.days,
+        departureDate: formData.departureDate,
+        arrivalDate: formData.arrivalDate,
+        moneyFlight: formData.moneyFlight,
+      } as PlacesData,
+    }
+  }
+
+  const persistDayPreferences = () => {
+    const { likedItems, dislikedItems } = buildSchedulePayload()
+
     saveDayPreferences(currentDay, {
       preferences: categories.map((cat) => ({
         title: cat.title,
@@ -424,56 +497,256 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
       dislikedItems,
     })
 
-    const dataToSend: PlacesData = {
-      currentDay,
-      budget: formData.budget || 0,
-      passengers: formData.passengers || 0,
-      restaurants: categories
-        .filter((cat) => cat.title === 'Restaurants')
-        .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
-      hotels: categories
-        .filter((cat) => cat.title === 'Hotels')
-        .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
-      activities: categories
-        .filter((cat) => cat.title === 'Recreation Places')
-        .flatMap((cat) => cat.items.map((item) => item.place_id?.toString() || '')),
-      transport: categories
-        .filter((cat) => cat.title === 'Local Transport')
-        .flatMap((cat) => cat.items.map((item) => item.name || '')),
-      disliked_restaurants: dislikedItems
-        .filter((item) => item.type === 'restaurants')
-        .map((item) => item.place_id?.toString() || ''),
-      disliked_hotels: dislikedItems
-        .filter((item) => item.type === 'hotels')
-        .map((item) => item.place_id?.toString() || ''),
-      disliked_activities: dislikedItems
-        .filter((item) => item.type === 'recreation_places')
-        .map((item) => item.place_id?.toString() || ''),
-      disliked_transport: dislikedItems
-        .filter((item) => item.type === 'local_transport')
-        .map((item) => item.name?.toString() || ''),
-      liked_restaurants: likedItems
-        .filter((item) => item.type === 'restaurants')
-        .map((item) => item.place_id?.toString() || ''),
-      liked_hotels: likedItems
-        .filter((item) => item.type === 'hotels')
-        .map((item) => item.place_id?.toString() || ''),
-      liked_activities: likedItems
-        .filter((item) => item.type === 'recreation_places')
-        .map((item) => item.place_id?.toString() || ''),
-      liked_transport: likedItems
-        .filter((item) => item.type === 'local_transport')
-        .map((item) => item.name?.toString() || ''),
+    return { likedItems, dislikedItems }
+  }
+
+  const handleContinue = async () => {
+    const { payload } = buildSchedulePayload()
+    persistDayPreferences()
+
+    if (mode === 'dashboard') {
+      try {
+        setIsSaving(true)
+        setFeedback(null)
+
+        const response = await fetch('/tour/generate-schedule', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+          },
+          body: JSON.stringify({
+            ...payload,
+            dashboard_mode: true,
+          }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.message || 'Failed to generate schedule')
+        }
+
+        const schedule = Array.isArray(data.scheduleData) ? data.scheduleData[0] : data.scheduleData
+        if (schedule) {
+          saveDaySchedule(currentDay, schedule)
+          refreshDaySchedules()
+        }
+
+        setFeedback({
+          type: 'success',
+          message: language === 'vi' ? 'Đã tạo lịch trình cho ngày hiện tại.' : 'Schedule generated for this day.',
+        })
+
+        if (currentDay < totalDays) {
+          handleContinueToNextDay(false)
+        }
+      } catch (error: any) {
+        console.error('Error generating schedule:', error)
+        setFeedback({
+          type: 'error',
+          message: error?.message || (language === 'vi' ? 'Không thể tạo lịch trình. Vui lòng thử lại.' : 'Unable to generate schedule. Please try again.'),
+        })
+      } finally {
+        setIsSaving(false)
+      }
+
+      return
     }
 
-    router.post('/tour/generate-schedule', dataToSend as any)
+    router.post('/tour/generate-schedule', payload as any)
   }
+
+  const handleContinueToNextDay = (persist = true) => {
+    if (persist) {
+      persistDayPreferences()
+    }
+
+    const nextDay = Math.min(currentDay + 1, totalDays)
+    if (nextDay !== currentDay) {
+      setCurrentDay(nextDay)
+      setFeedback(null)
+      setCategories([])
+      setIsLoading(true)
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+      }, 0)
+    }
+  }
+
+  const handleClearAll = () => {
+    saveTourData({
+      dayPreferences: {},
+      daySchedules: {},
+      currentDay: 1,
+    })
+    setDaySchedules({})
+    setCategories([])
+    setFeedback({
+      type: 'success',
+      message: language === 'vi' ? 'Đã xoá toàn bộ dữ liệu từng ngày.' : 'All day preferences and schedules were cleared.',
+    })
+    setCurrentDay(1)
+    setIsLoading(true)
+  }
+
+  const handleGenerateFinalTour = () => {
+    const schedules = Object.keys(daySchedules)
+      .map((dayKey) => Number(dayKey))
+      .sort((a, b) => a - b)
+      .map((day) => daySchedules[day])
+      .filter(Boolean)
+
+    if (!schedules.length) {
+      setFeedback({
+        type: 'error',
+        message: language === 'vi' ? 'Chưa có lịch trình nào được tạo.' : 'No schedule available to generate final tour.',
+      })
+      return
+    }
+
+    const payload = {
+      schedules,
+      destination: formData.destination,
+      departure: formData.departure,
+      days: formData.days,
+      budget: formData.budget,
+      passengers: formData.passengers,
+      selectedDepartureFlight: storedTourData?.selectedDepartureFlight,
+      selectedReturnFlight: storedTourData?.selectedReturnFlight,
+    }
+
+    setIsGeneratingFinal(true)
+    router.post('/tour/generate-final', payload, {
+      onFinish: () => {
+        setIsGeneratingFinal(false)
+      },
+    })
+  }
+
+  const renderPrimaryAction = () => {
+    const hasSchedule = !!daySchedules[currentDay]
+    const isLastDay = currentDay === totalDays
+
+    if (isGeneratingFinal) {
+      return (
+        <button type="button" className="dashboard-preferences__primary" disabled>
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>{language === 'vi' ? 'Đang tạo tour cuối' : 'Generating final tour...'}</span>
+        </button>
+      )
+    }
+
+    if (isSaving) {
+      return (
+        <button type="button" className="dashboard-preferences__primary" disabled>
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>{language === 'vi' ? 'Đang xử lý...' : 'Processing...'}</span>
+        </button>
+      )
+    }
+
+    if (hasSchedule && isLastDay && allDaysCompleted) {
+      return (
+        <button type="button" className="dashboard-preferences__primary" onClick={handleGenerateFinalTour}>
+          <span>{language === 'vi' ? 'Hoàn tất & tạo tour cuối' : 'Generate final tour'}</span>
+          <Check className="w-5 h-5" />
+        </button>
+      )
+    }
+
+    if (hasSchedule && currentDay < totalDays) {
+      return (
+        <button type="button" className="dashboard-preferences__primary" onClick={() => handleContinueToNextDay()}>
+          <span>{language === 'vi' ? 'Tiếp tục sang ngày kế' : 'Continue to next day'}</span>
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )
+    }
+
+    return (
+      <button type="button" className="dashboard-preferences__primary" onClick={handleContinue}>
+        <span>{language === 'vi' ? 'Tiếp tục tạo lịch trình' : 'Continue to build schedule'}</span>
+        <ChevronRight className="w-5 h-5" />
+      </button>
+    )
+  }
+
+  useEffect(() => {
+    const loadDataForDay = async () => {
+      if (!formData.destination) {
+        setIsLoading(false)
+        return
+      }
+
+      setIsLoading(true)
+
+      const storedPreferences = getDayPreferences(currentDay)
+      if (storedPreferences?.preferences) {
+        const rebuilt = rebuildCategoriesFromStorage(storedPreferences.preferences as CategorySection[])
+        setCategories(rebuilt)
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        let cityId = formData.city_id
+        if (!cityId && formData.destination) {
+          const cityResponse = await fetch(`/api/city?search=${encodeURIComponent(formData.destination)}`)
+          const cityData = await cityResponse.json()
+          if (Array.isArray(cityData) && cityData.length > 0) {
+            const exactMatch = cityData.find((c: any) => c.city === formData.destination || c.city_ascii === formData.destination)
+            cityId = (exactMatch || cityData[0])._id
+            saveTourData({ city_id: cityId })
+            setFormData((prev) => ({ ...prev, city_id: cityId }))
+          }
+        }
+
+        const params = new URLSearchParams({
+          city_id: cityId || '',
+          destination: formData.destination || '',
+          days: String(formData.days || 1),
+          budget: String(formData.budget || 1000),
+          passengers: String(formData.passengers || 1),
+        })
+        const response = await fetch(`/api/places/tour-preferences?${params.toString()}`)
+        const data = await response.json()
+
+        if (data.success) {
+          const transformed = transformCategoriesFromApi(data.data)
+          setCategories(transformed)
+          saveDayPreferences(currentDay, {
+            preferences: transformed,
+            likedItems: [],
+            dislikedItems: [],
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching tour preferences:', err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadDataForDay()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDay, formData.destination, formData.city_id, formData.days, formData.budget, formData.passengers])
+
+  useEffect(() => {
+    setDaySchedules(getAllDaySchedules())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDay])
 
   return (
     <section id="dashboard-preferences" className="dashboard-preferences">
       <div className="dashboard-preferences__halo" aria-hidden="true" />
       <div className="dashboard-preferences__inner">
         <header className="dashboard-preferences__header">
+          {feedback && (
+            <div className={`dashboard-preferences__feedback is-${feedback.type}`}>
+              {feedback.message}
+            </div>
+          )}
           <div className="dashboard-preferences__chip">
             <span>{language === 'vi' ? 'Tinh chỉnh ưu tiên' : 'Refine preferences'}</span>
             <span className="dashboard-preferences__chip-sep" />
@@ -556,7 +829,8 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
 
                 <div className="dashboard-preferences__progress-steps">
                   {Array.from({ length: formData.days || 1 }, (_, idx) => idx + 1).map((day) => {
-                    const isCompleted = !!daySchedules[day]
+                    const schedule = daySchedules[day]
+                    const isCompleted = !!schedule
                     const isCurrent = day === currentDay
                     return (
                       <button
@@ -575,26 +849,43 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
                 </div>
               </div>
 
-              {selectedDaySchedule && (
+              {selectedDaySchedule ? (
                 <div className="dashboard-preferences__schedule">
                   <h4>{language === 'vi' ? 'Tóm tắt lịch trong ngày' : 'Day schedule summary'}</h4>
-                  <ul>
-                    {selectedDaySchedule.items?.map((item: any) => (
-                      <li key={`${item.id}-${item.startTime}`}>
-                        <div>
-                          <span>{item.title}</span>
-                          <small>
-                            {item.startTime} – {item.endTime}
-                          </small>
-                        </div>
-                        <strong>${formatCost(item.cost)}</strong>
-                      </li>
-                    ))}
-                  </ul>
+                  {selectedDaySchedule.items?.length ? (
+                    <ul>
+                      {selectedDaySchedule.items.map((item: any) => (
+                        <li key={`${item.id}-${item.startTime}`}>
+                          <div>
+                            <span>{item.title}</span>
+                            <small>
+                              {item.startTime} – {item.endTime}
+                            </small>
+                          </div>
+                          <strong>${formatCost(item.cost)}</strong>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="dashboard-preferences__schedule-empty">
+                      {language === 'vi'
+                        ? 'Ngày này chưa có lịch trình. Hãy nhấn Tiếp tục để tạo lịch trình.'
+                        : 'No schedule saved for this day yet. Press Continue to build one.'}
+                    </p>
+                  )}
                   <footer>
                     <span>{language === 'vi' ? 'Tổng chi phí' : 'Total cost'}</span>
                     <strong>${formatCost(selectedDaySchedule.totalCost)}</strong>
                   </footer>
+                </div>
+              ) : (
+                <div className="dashboard-preferences__schedule">
+                  <h4>{language === 'vi' ? 'Tóm tắt lịch trong ngày' : 'Day schedule summary'}</h4>
+                  <p className="dashboard-preferences__schedule-empty">
+                    {language === 'vi'
+                      ? 'Chưa có lịch trình cho ngày này.'
+                      : 'No schedule available for this day yet.'}
+                  </p>
                 </div>
               )}
             </div>
@@ -690,15 +981,21 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
                 <div>
                   <span>{language === 'vi' ? 'Ngày đang xử lý' : 'Editing day'}</span>
                   <strong>
-                    {currentDay}/{formData.days || 1}
+                    {currentDay}/{totalDays}
                   </strong>
                 </div>
               </div>
               <div className="dashboard-preferences__footer-actions">
-                <button type="button" className="dashboard-preferences__primary" onClick={handleContinue}>
-                  <span>{language === 'vi' ? 'Tiếp tục tạo lịch trình' : 'Continue to build schedule'}</span>
-                  <ChevronRight className="w-5 h-5" />
+                <button
+                  type="button"
+                  className="dashboard-preferences__ghost"
+                  onClick={handleClearAll}
+                  disabled={isSaving || isGeneratingFinal}
+                >
+                  <span>{language === 'vi' ? 'Reset toàn bộ' : 'Clear all days'}</span>
                 </button>
+
+                {renderPrimaryAction()}
               </div>
             </footer>
           </div>

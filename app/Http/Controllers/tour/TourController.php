@@ -47,6 +47,10 @@ class TourController extends Controller
         
         $validated = $request->all();
 
+        $isDashboardRequest = $request->boolean('dashboard_mode')
+            || $request->input('mode') === 'dashboard'
+            || $request->expectsJson();
+
         // Save tour data to session
         session(['tour_data' => $validated]);
         Log::info('Tour data', $validated);
@@ -79,10 +83,18 @@ class TourController extends Controller
                     'error' => $result['error']
                 ]);
 
-            return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
-                'error' => 'Failed to generate schedule: ' . ($result['error'] ?? 'Unknown error'),
-                'scheduleData' => $this->generateFallbackSchedule($validated),
-            ]);
+                if ($isDashboardRequest) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to generate schedule: ' . ($result['error'] ?? 'Unknown error'),
+                        'scheduleData' => $this->generateFallbackSchedule($validated),
+                    ], 502);
+                }
+
+                return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
+                    'error' => 'Failed to generate schedule: ' . ($result['error'] ?? 'Unknown error'),
+                    'scheduleData' => $this->generateFallbackSchedule($validated),
+                ]);
             }
 
             // Transform Python API response to frontend format
@@ -92,6 +104,14 @@ class TourController extends Controller
                 'days' => count($scheduleData),
                 'total_cost' => $result['data']['tour_info']['total_estimated_cost'] ?? 0
             ]);
+
+            if ($isDashboardRequest) {
+                return response()->json([
+                    'success' => true,
+                    'scheduleData' => $scheduleData,
+                    'tourInfo' => $result['data']['tour_info'] ?? null,
+                ]);
+            }
 
             return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
                 'success' => "Schedule generated successfully with AI!",
@@ -104,6 +124,14 @@ class TourController extends Controller
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            if ($isDashboardRequest) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'An error occurred while generating schedule. Please try again.',
+                    'scheduleData' => $this->generateFallbackSchedule($validated),
+                ], 500);
+            }
 
             return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
                 'error' => 'An error occurred while generating schedule. Please try again.',
