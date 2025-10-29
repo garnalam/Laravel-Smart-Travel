@@ -18,7 +18,7 @@ interface AuthActions {
   checkAuth: () => void
   clearError: () => void
   setLoading: (loading: boolean) => void
-  setUser: (user: User | null) => void // <-- 1. ĐÃ THÊM DÒNG NÀY
+  setUser: (user: User | null) => void 
 }
 
 type AuthStore = AuthState & AuthActions
@@ -34,7 +34,6 @@ export const useAuthStore = create<AuthStore>()(
         isLoading: false,
         error: null,
 
-        // --- 2. ĐÃ THÊM HÀM MỚI VÀO ĐÂY ---
         /**
          * Action này dùng để "mớm" (seed) user data 
          * từ Laravel (thông qua Inertia props) vào store.
@@ -45,7 +44,6 @@ export const useAuthStore = create<AuthStore>()(
             isAuthenticated: !!user, // Sẽ là `true` nếu user có data, `false` nếu là `null`
           });
         },
-        // --- KẾT THÚC PHẦN THÊM ---
 
         // Actions
         login: async (credentials: LoginCredentials) => {
@@ -138,11 +136,15 @@ export const useAuthStore = create<AuthStore>()(
       }),
       {
         name: 'auth-store',
+        
+        // ===== BẮT ĐẦU SỬA LỖI =====
+        // Chỉ lưu 'token' vào localStorage.
+        // KHÔNG lưu 'user' và 'isAuthenticated' để tránh
+        // xung đột (race condition) với props 'auth.user' từ Inertia.
         partialize: (state) => ({
-          user: state.user,
           token: state.token,
-          isAuthenticated: state.isAuthenticated,
         }),
+        // ===== KẾT THÚC SỬA LỖI =====
       }
     ),
     {

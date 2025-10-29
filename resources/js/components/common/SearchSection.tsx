@@ -6,7 +6,12 @@ import { AirlineSearchForm } from '@/components/forms/AirlineSearchForm'
 
 type TabType = 'travel' | 'hotel' | 'airline' | 'package' | 'restaurant'
 
-export function SearchSection() {
+interface SearchSectionProps {
+  onShowFlightBooking?: (data: any) => void
+}
+
+export function SearchSection({ onShowFlightBooking }: SearchSectionProps) {
+  // console.log('🟢 [SearchSection] Nhận được callback:', !!onShowFlightBooking, typeof onShowFlightBooking)
   const { language } = useAppStore()
   const [activeTab, setActiveTab] = useState<TabType>('travel')
 
@@ -64,7 +69,8 @@ export function SearchSection() {
   const renderContent = () => {
     switch (activeTab) {
       case 'travel':
-        return <TravelSearchForm />
+        // console.log('🟢 [SearchSection] Truyền callback xuống TravelSearchForm:', !!onShowFlightBooking)
+        return <TravelSearchForm onShowFlightBooking={onShowFlightBooking} />
       case 'hotel':
         return <HotelSearchForm />
       case 'airline':

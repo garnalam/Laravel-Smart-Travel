@@ -12,8 +12,11 @@
     use Filament\Infolists;
     use Filament\Infolists\Infolist;
     use Filament\Forms\Get;
-    use Illuminate\Database\Eloquent\Builder; // BẮT BUỘC THÊM DÒNG NÀY
+    use Illuminate\Database\Eloquent\Builder; 
     use Illuminate\Support\HtmlString;
+    use App\Support\ApiTesterService;
+    use Filament\Notifications\Notification;
+    use Illuminate\Support\Str;
 
     class ConnectionResource extends Resource
     {
@@ -183,10 +186,29 @@
             ]);
     }
 
-    // app/Filament/Resources/ConnectionResource.php
-
-    protected static function getParametersStep(): Forms\Components\Wizard\Step
+        protected static function getParametersStep(): Forms\Components\Wizard\Step
     {
+        // Phần closure $updateCronExpression giữ nguyên
+        $updateCronExpression = function (Get $get, callable $set) {
+            $type = $get('schedule_config.type');
+            $config = $get('schedule_config.config') ?? [];
+            $time = '00:00';
+            if ($type === 'daily' && isset($config['daily_time'])) { $time = $config['daily_time']; }
+            elseif ($type === 'weekly' && isset($config['weekly_time'])) { $time = $config['weekly_time']; }
+            elseif ($type === 'monthly' && isset($config['monthly_time'])) { $time = $config['monthly_time']; }
+            [$hour, $minute] = explode(':', $time);
+            $hour = intval($hour);
+            $minute = intval($minute);
+            $cron = match ($type) {
+                'hourly' => "{$minute} * * * *",
+                'daily' => "{$minute} {$hour} * * *",
+                'weekly' => "{$minute} {$hour} * * " . ($config['weekly_day'] ?? '1'),
+                'monthly' => "{$minute} {$hour} " . ($config['monthly_day'] ?? '1') . " * *",
+                default => null,
+            };
+            if ($cron) { $set('schedule_config.cronExpression', $cron); }
+        };
+
         return Forms\Components\Wizard\Step::make('Parameters')
             ->description('Set up request parameters')
             ->schema([
@@ -270,7 +292,77 @@
             ]);
     }
 
-        protected static function getDataMappingStep(): Forms\Components\Wizard\Step
+    /**
+     * Hàm helper để đệ quy trích xuất các trường từ response JSON/Array.
+     */
+private static function extractFields(mixed $obj, string $prefix = ''): array
+{
+    $detectedFields = [];
+
+    // --- BẮT ĐẦU SỬA LỖI ---
+    // Thêm chốt an toàn: Nếu đầu vào không phải là object hoặc array,
+    // trả về mảng rỗng ngay lập tức.
+    if (!is_array($obj) && !is_object($obj)) {
+        return [];
+    }
+    // --- KẾT THÚC SỬA LỖI ---
+
+    // Closure đệ quy
+    $traverse = function ($value, $path) use (&$traverse, &$detectedFields) {
+        
+        if ($value === null) {
+            return;
+        }
+
+        // 1. Nếu là một MẢNG (list, ví dụ: [ {...}, {...} ])
+        if (is_array($value) && !empty($value) && array_keys($value) === range(0, count($value) - 1)) {
+            // Chỉ trích xuất cấu trúc của phần tử đầu tiên
+            if (isset($value[0])) { // Kiểm tra xem mảng có phần tử không
+                $traverse($value[0], $path . '[0]');
+            }
+            return;
+        }
+
+        // 2. Nếu là một OBJECT (map, ví dụ: { "a": 1, "b": {...} })
+        if (is_array($value) || is_object($value)) {
+            foreach ($value as $key => $val) {
+                $newPath = $path ? $path . '.' . $key : $key;
+                
+                if ($val === null) continue;
+
+                if (is_array($val) && !empty($val) && array_keys($val) === range(0, count($val) - 1)) {
+                    if (isset($val[0])) { // Kiểm tra xem mảng có phần tử không
+                        $traverse($val[0], $newPath . '[0]');
+                    }
+                } 
+                elseif (is_array($val) || is_object($val)) {
+                    $traverse($val, $newPath);
+                } 
+                else {
+                    $type = 'string';
+                    if (is_numeric($val)) $type = 'number';
+                    if (is_bool($val)) $type = 'boolean';
+                    if (is_string($val) && preg_match('/^\d{4}-\d{2}-\d{2}/', $val)) $type = 'date';
+                    
+                    $detectedFields[] = [
+                        'isSelected' => true,
+                        'sourcePath' => $newPath,
+                        'targetField' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $key)),
+                        'dataType' => $type,
+                    ];
+                }
+            }
+        }
+    };
+
+    // Bắt đầu đệ quy
+    $traverse($obj, $prefix);
+    
+    return $detectedFields;
+}
+
+
+    protected static function getDataMappingStep(): Forms\Components\Wizard\Step
     {
         return Forms\Components\Wizard\Step::make('Data Mapping')
             ->description('Map response fields to database')
@@ -279,39 +371,105 @@
                 Forms\Components\Section::make('Test API Connection')
                     ->description('Kiểm tra API của bạn để xem trước cấu trúc response và tự động phát hiện các trường.')
                     ->schema([
+                        // Tên placeholder để hiển thị JSON preview
+                        Forms\Components\Placeholder::make('api_response_preview')
+                            ->label('API Response Preview')
+                            ->content(fn (Get $get) => new HtmlString('<pre class="p-3 text-xs bg-gray-50 dark:bg-gray-800/50 rounded-lg max-h-48 overflow-auto whitespace-pre-wrap break-all">' . e(json_encode(json_decode($get('test_response.body') ?? 'null', true), JSON_PRETTY_PRINT)) . '</pre>'))
+                            ->visible(fn (Get $get) => !empty($get('test_response.body'))),
+                        
+                        // Thông báo lỗi/thành công
+                        Forms\Components\Placeholder::make('api_status')
+                            // START FIX: Sử dụng HtmlString để tạo div thông báo thay vì gọi getHtml()
+                            ->content(function (Get $get) {
+                                $status = $get('test_response.status');
+                                $message = $get('test_response.message');
+                                $icon = match ($status) {
+                                    200, 204 => '<svg class="h-5 w-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>', // CheckCircle
+                                    default => '<svg class="h-5 w-5 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.375c.865 2.873 3.465 5.25 6.476 6.075 3.011.825 6.168.45 8.767-1.125a13.375 13.375 0 0 0 1.25-1.556c.21-.29.28-.625.21-1.071-.05-.333-.18-.65-.39-1.002-.27-.478-.656-.967-1.085-1.428-1.01-1.08-2.227-2.124-3.483-3.08-1.523-1.165-3.091-2.185-4.706-2.986C12.825 6.425 12 5.567 12 4.5c0-1.104-.896-2-2-2S8 3.396 8 4.5c0 1.067-.825 1.925-1.256 2.375-1.615.799-3.183 1.82-4.706 2.986-1.256.956-2.473 1.999-3.483 3.08-.429.46-.815.948-1.085 1.428-.21.352-.34.669-.39 1.002-.07.446 0 .781.21 1.071.07.098.17.208.28.324A13.35 13.35 0 0 0 12 21.75Z" /></svg>', // AlertCircle
+                                };
+                                $color = match ($status) {
+                                    200, 204 => 'success',
+                                    default => 'danger',
+                                };
+                                $title = match ($status) {
+                                    200, 204 => 'Connection successful!',
+                                    default => 'Connection failed!',
+                                };
+                                $text = $title . ' (Status: ' . $status . ') ' . ($message ? ' - ' . $message : '');
+
+                                return new HtmlString("
+                                    <div class='fi-section-header-description text-sm p-3 rounded-lg fi-{$color}-500/10 dark:bg-{$color}-500/20 text-{$color}-700 dark:text-{$color}-400 border border-{$color}-300 dark:border-{$color}-500/30 flex items-center gap-2'>
+                                        {$icon}
+                                        <span>{$text}</span>
+                                    </div>
+                                ");
+                            })
+                            // END FIX
+                            ->visible(fn (Get $get) => !empty($get('test_response.status')) && $get('test_response.status') !== 0)
+                            ->columnSpanFull(),
+                        
                         Forms\Components\Actions::make([
                             Forms\Components\Actions\Action::make('test_connection')
                                 ->label('Test Connection')
                                 ->icon('heroicon-o-play')
+                                ->color('primary')
+                                // Thêm spinner và disable khi đang tải
+                                ->extraAttributes([
+                                    'wire:loading.attr' => 'disabled',
+                                    'wire:loading.class' => 'opacity-70 cursor-wait',
+                                ])
                                 ->action(function (Get $get, callable $set) {
-                                    // MOCK DATA TẠM THỜI
-                                    $mockResponse = [
-                                        'id' => 1, 'name' => "John Doe", 'email' => "john@example.com",
-                                        'company' => ['name' => "Acme Corp", 'catchPhrase' => "Innovative solutions"],
-                                        'address' => ['street' => "123 Main St", 'city' => "New York"],
-                                    ];
+                                    $apiConfig = $get('apiConfig');
+                                    $parameters = $get('parameters') ?? [];
+
+                                    // Reset trạng thái trước khi gọi
+                                    $set('test_response', ['status' => 0, 'body' => null, 'message' => null]);
                                     
-                                    $detectedFields = [];
-                                    $extract = function ($obj, $prefix = '') use (&$extract, &$detectedFields) {
-                                        foreach ($obj as $key => $value) {
-                                            $newPath = $prefix ? $prefix . '.' . $key : $key;
-                                            if (is_array($value) && !empty($value) && array_keys($value) !== range(0, count($value))) {
-                                                $extract($value, $newPath);
+                                    // Gộp Parameters vào apiConfig
+                                    $apiConfig['parameters'] = $parameters;
+                                    
+                                    // BƯỚC 1: GỌI SERVICE THỰC HIỆN TEST API
+                                    $tester = new ApiTesterService();
+                                    $testResult = $tester->testConnection($apiConfig);
+                                    
+                                    // Lưu kết quả test vào state của form để hiển thị Preview và Status
+                                    $set('test_response', $testResult);
+
+                                    // BƯỚC 2: PHÂN TÍCH VÀ ĐỀ XUẤT CÁC TRƯỜNG (Field Mapping)
+                                    if ($testResult['success'] && $testResult['body']) {
+                                        $responseBody = json_decode($testResult['body'], true);
+
+                                        if (is_array($responseBody)) {
+                                            
+                                            // Lọc ra Array data nếu có (ví dụ: [metadata, data_array])
+                                            $dataArray = null;
+                                            if (count($responseBody) >= 2 && array_keys($responseBody) === range(0, count($responseBody) - 1) && is_array($responseBody[1])) {
+                                                // Nếu là mảng tuần tự có 2 phần tử, và phần tử thứ 2 là mảng (giống logic cũ)
+                                                $dataArray = $responseBody[1]; 
                                             } else {
-                                                $detectedFields[] = [
-                                                    'isSelected' => true,
-                                                    'sourcePath' => $newPath,
-                                                    'targetField' => strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $key)),
-                                                    'dataType' => is_numeric($value) ? 'number' : 'string',
-                                                ];
+                                                $dataArray = $responseBody;
                                             }
+                                            
+                                        $detectedFields = self::extractFields($dataArray);
+                                                                                
+                                        // --- SỬA LỖI TẠI ĐÂY ---
+                                        // Xóa bỏ logic "if (empty(...))"
+                                        // Luôn luôn cập nhật danh sách trường khi test thành công.
+                                        $set('data_mapping.field_mappings', $detectedFields);
+                                        // --- KẾT THÚC SỬA LỖI ---
+                                                                                
+                                        // Gửi notification ngoài form
+                                        Notification::make()->success()->title('Connection successful!')
+                                            ->body('Detected ' . count($detectedFields) . ' fields.')
+                                            ->send();
+                                        } else {
+                                            Notification::make()->warning()->title('Test successful, but response is not JSON/Array.')->body("Received raw data, cannot automatically detect fields.")->send();
                                         }
-                                    };
-                                    $extract($mockResponse);
-
-                                    $set('data_mapping.field_mappings', $detectedFields);
-
-                                    \Filament\Notifications\Notification::make()->success()->title('Connection successful!')->body('Detected ' . count($detectedFields) . ' fields.')->send();
+                                        
+                                    } elseif (!$testResult['success']) {
+                                         // Gửi notification ngoài form
+                                         Notification::make()->danger()->title('Connection failed!')->body($testResult['message'] . " (Status: {$testResult['status']})")->send();
+                                    }
                                 }),
                         ]),
                     ]),
@@ -324,7 +482,7 @@
                             ->schema([
                                 Forms\Components\TextInput::make('data_mapping.tableName')
                                     ->label('Target Table Name *')
-                                    ->prefixIcon('heroicon-o-table-cells'), // <-- ĐÃ SỬA LỖI Ở ĐÂY
+                                    ->prefixIcon('heroicon-o-table-cells'),
 
                                 Forms\Components\Actions::make([
                                     Forms\Components\Actions\Action::make('select_all')
@@ -390,16 +548,16 @@
                                     Forms\Components\Toggle::make('data_mapping.options.storeRaw')
                                         ->label('Store Raw Data')
                                         ->default(true),
-                                ])
+                                ]),
                             ]),
                     ])
                     ->visible(fn (Get $get) => !empty($get('data_mapping.field_mappings'))),
             ]);
     }
 
-    
+    // Các hàm getScheduleStep và getReviewStep (không thay đổi)
 
-    protected static function getScheduleStep(): Forms\Components\Wizard\Step
+        protected static function getScheduleStep(): Forms\Components\Wizard\Step
     {
         // Phần closure $updateCronExpression giữ nguyên
         $updateCronExpression = function (Get $get, callable $set) {
@@ -460,7 +618,7 @@
                         Forms\Components\Grid::make(2)->schema([
                             Forms\Components\DatePicker::make('schedule_config.config.once_date')->label('Run Date'),
                             Forms\Components\TimePicker::make('schedule_config.config.once_time')->label('Run Time'),
-                        ])->visible(fn (Get $get) => $get('schedule_config.type') === 'once'), // <-- DẤU PHẨY ĐÃ ĐƯỢC THÊM
+                        ])->visible(fn (Get $get) => $get('schedule_config.type') === 'once'), 
 
                         Forms\Components\Placeholder::make('hourly_info')
                             ->content('The API will be called at the start of every hour (e.g., 1:00, 2:00, 3:00).')

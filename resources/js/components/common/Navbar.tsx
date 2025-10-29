@@ -9,6 +9,7 @@ interface NavbarProps {
 
 export function Navbar({ appearance = 'solid' }: NavbarProps) {
   const { user } = useAuthStore()
+  console.log('[Navbar] Đang render với user từ store:', user);
   const { language } = useAppStore()
   const [showAuthDropdown, setShowAuthDropdown] = useState(false)
 

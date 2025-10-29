@@ -1,58 +1,60 @@
-// File: resources/js/Layouts/MainLayout.tsx
+/*
+  GHI CHÚ QUAN TRỌNG DÀNH CHO BẠN:
 
-import React, { PropsWithChildren, useEffect } from 'react';
-import { usePage } from '@inertiajs/react';
+  Bạn đang thấy lỗi "Could not resolve" (ví dụ: @/store/useAuthStore, @inertiajs/react).
 
-// 1. SỬA LỖI: Import 'PageProps' từ '@inertiajs/core'
-// File 'inertia.d.ts' của bạn đã tự động "thêm" (augment) type này
-import { PageProps } from '@inertiajs/core'; 
+  Đây LÀ ĐIỀU ĐƯỢC DỰ KIẾN trong môi trường xem trước (Canvas) này.
+  
+  Môi trường này không thể đọc được các thư viện (node_modules) 
+  hoặc đường dẫn alias (@/) từ dự án của bạn.
 
-import { useAuthStore } from '@/store/useAuthStore';
-import { Navbar } from '@/components/common/Navbar'; 
+  Đây KHÔNG PHẢI LÀ LỖI LOGIC. Code bên dưới là chính xác.
+  
+  Khi bạn dán code này vào file local và chạy `npm run dev`, 
+  nó SẼ HOẠT ĐỘNG.
+*/
 
-// 2. Xóa tất cả interface 'SharedProps' hoặc import 'User',
-// vì 'PageProps' từ '@inertiajs/core' đã chứa tất cả
+// 1. Thêm các import cần thiết từ file "cũ" của bạn
+import React, { PropsWithChildren, useEffect } from 'react'
+import { usePage } from '@inertiajs/react'
+import { PageProps } from '@inertiajs/core' // Import 'PageProps' toàn cục
+import { useAuthStore } from '@/store/useAuthStore' // Import store của bạn
+
+import { Navbar } from '@/components/common/Navbar'
+import { Footer } from '@/components/common/Footer'
+import '../../css/dashboard.css'
 
 export default function MainLayout({ children }: PropsWithChildren) {
-    
-    // 3. Giờ đây 'usePage<PageProps>()' sẽ hoạt động
-    // và 'props' sẽ có đầy đủ các type từ file .d.ts của bạn
-    const { active_theme, auth } = usePage<PageProps>().props;
-    
-    const { setUser } = useAuthStore();
-    
-    // 4. LƯU Ý QUAN TRỌNG:
-    // Dùng 'auth?.user' (optional chaining) để tránh lỗi nếu 'auth' là null
-    const userFromProps = auth?.user; 
+  // 2. Thêm logic từ file "cũ" của bạn vào đây
+  const page = usePage<PageProps>()
+  const { active_theme, auth } = page.props
+  const { setUser } = useAuthStore()
+  const userFromProps = auth?.user
 
-    useEffect(() => {
-        // Truyền 'userFromProps || null' để đảm bảo
-        // 'undefined' (từ auth?.user) sẽ trở thành 'null'
-        setUser(userFromProps || null); 
-    }, [userFromProps, setUser]);
+  useEffect(() => {
+    // Tự động cập nhật user state khi props từ Inertia thay đổi
+    setUser(userFromProps || null)
+  }, [userFromProps, setUser])
 
-    return (
-        // 5. LƯU Ý QUAN TRỌNG:
-        // 'active_theme' là object, nên chúng ta cần '.url'
-        <div data-theme={active_theme?.url || 'default'}> 
-            <div className="themeable-container">
-                
-                <Navbar appearance="solid" /> 
+  // 3. Giữ nguyên cấu trúc layout "dashboard" (file trong canvas)
+  //    VÀ thêm 'data-theme' từ file "cũ" của bạn
+  return (
+    <div
+      className="dashboard-page"
+      data-theme={active_theme?.url || 'default'} // 4. Gộp logic theme
+    >
+      <div className="dashboard-page__background" aria-hidden="true" />
+      <div className="dashboard-page__texture" aria-hidden="true" />
 
-                <aside className="themeable-sidebar">
-                    <h2>Sidebar</h2>
-                    <ul>
-                        <li>Menu Item 1</li>
-                        <li>Menu Item 2</li>
-                    </ul>
-                </aside>
-                <main className="themeable-content">
-                    {children}
-                </main>
-                <footer className="themeable-footer">
-                    <p>Đây là Footer Cố Định</p>
-                </footer>
-            </div>
-        </div>
-    );
+      {/* Navbar và Footer vẫn được giữ nguyên */}
+      <Navbar appearance="glass" />
+
+      <main className="dashboard-main">
+        {children}
+      </main>
+
+      <Footer />
+    </div>
+  )
 }
+

@@ -14,6 +14,7 @@ export interface City {
   city: string
   country: string
 }
+<<<<<<< Updated upstream
 
 export interface Flight {
   id: string
@@ -29,6 +30,9 @@ export interface FlightResponse {
   error?: string
 }
 
+=======
+export type TabType = 'travel' | 'hotel' | 'airline' | 'package' | 'restaurant'
+>>>>>>> Stashed changes
 export interface DataTour {
   city_id: string
   departure: string
