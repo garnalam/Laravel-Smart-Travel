@@ -284,7 +284,7 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
                 className="flight-booking__card-header"
                 onClick={() => setIsDepartureFlightOpen(!isDepartureFlightOpen)}
               >
-                <div className="flight-booking__card-title">
+                <div className="flight-booking__card-title min-w-120">
                   <i className="fas fa-plane-departure" aria-hidden="true" />
                   <div>
                     <h3>{language === 'vi' ? 'Chuyến bay đi' : 'Departure Flight'}</h3>

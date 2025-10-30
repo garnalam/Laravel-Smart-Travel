@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { useToast } from '@/hooks/useToast';
 import { PageProps } from '@inertiajs/core';
 
-// import { Navbar } from "@/components/common/Navbar";
+import { Navbar } from "@/components/common/Navbar";
 interface TourInfo {
     id: string;
     name: string;
@@ -104,16 +104,41 @@ export default function Home() {
             .trim();                            // loại bỏ khoảng trắng cuối cùng
     };
 
+    // Format expiry date as MM/DD, where MM is 01-12 and DD is 01-31
+    // Output tối đa 5 ký tự (MM/DD hoặc MM/D hoặc M/D)
     const formatExpiryDate = (value: string) => {
-        return value
-            .replace(/\D/g, "")
-            .replace(/(\d{2})(\d)/, "$1/$2")
-            .substring(0, 5);
+        // Giữ số và lấy tối đa 4 số cho MMDD
+        let digits = value.replace(/\D/g, "").slice(0, 4);
+
+        let month = digits.slice(0, 2);
+        let day = digits.slice(2, 4);
+
+        // Xử lý tháng MM: 01-12
+        if (month.length === 2) {
+            let m = parseInt(month, 10);
+            if (m === 0) month = "01";
+            else if (m > 12) month = "12";
+            else if (month[0] === '0' && month[1] === '0') month = '01';
+        }
+
+        // Xử lý ngày DD: 01-31
+        if (day.length === 2) {
+            let d = parseInt(day, 10);
+            if (d === 0) day = "01";
+            else if (d > 31) day = "31";
+            else if (day[0] === '0' && day[1] === '0') day = '01';
+        }
+
+        let result = month;
+        if (day.length) {
+            result += '/' + day;
+        }
+        return result.slice(0, 5);
     };
 
     return (
         <>
-        {/* <Navbar /> */}
+        <Navbar appearance="glass" />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 text-gray-900">
             <div className="max-w-7xl mx-auto">
                 <div className="mb-8">
