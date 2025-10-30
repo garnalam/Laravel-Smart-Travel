@@ -590,7 +590,7 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     setIsLoading(true)
   }
 
-  const handleGenerateFinalTour = () => {
+  const handleGenerateFinalTour = async () => {
     const schedules = Object.keys(daySchedules)
       .map((dayKey) => Number(dayKey))
       .sort((a, b) => a - b)
@@ -617,11 +617,53 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     }
 
     setIsGeneratingFinal(true)
-    router.post('/tour/generate-final', payload, {
-      onFinish: () => {
-        setIsGeneratingFinal(false)
-      },
-    })
+    try {
+      const response = await fetch('/tour/generate-final', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to generate final tour')
+      }
+
+      const finalData = data.tourData || data.finalTourData
+
+      setFeedback({
+        type: 'success',
+        message: language === 'vi' ? 'Đã tạo tour hoàn chỉnh!' : 'Final tour generated successfully!',
+      })
+
+      if (!finalData) {
+        throw new Error(language === 'vi' ? 'Không nhận được dữ liệu tour' : 'No final tour data received')
+      }
+
+      // Trigger callback to parent component (Dashboard) to show FinalTour
+      if (mode === 'dashboard') {
+        const event = new CustomEvent('showFinalTour', { 
+          detail: { tourData: finalData } 
+        })
+        window.dispatchEvent(event)
+      } else {
+        // Fallback to navigation for non-dashboard mode
+        router.visit('/tour/final', { data: { tourData: finalData } })
+      }
+    } catch (error: any) {
+      console.error('Error generating final tour:', error)
+      setFeedback({
+        type: 'error',
+        message: error?.message || (language === 'vi' ? 'Không thể tạo tour hoàn chỉnh. Vui lòng thử lại.' : 'Unable to generate final tour. Please try again.'),
+      })
+    } finally {
+      setIsGeneratingFinal(false)
+    }
   }
 
   const renderPrimaryAction = () => {
@@ -910,7 +952,13 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
             ) : (
               <div className="dashboard-preferences__cards">
                 {categories.map((category, categoryIndex) => (
-                  <article key={category.title} className="dashboard-preferences__card">
+                  <article
+                    key={category.title}
+                    className="dashboard-preferences__card"
+                    role="region"
+                    aria-label={`${category.title} suggestions`}
+                    tabIndex={0}
+                  >
                     <header>
                       <div className="dashboard-preferences__icon">{category.icon}</div>
                       <div>

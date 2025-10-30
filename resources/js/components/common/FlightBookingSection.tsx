@@ -297,7 +297,7 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
               </div>
 
               {isDepartureFlightOpen && (
-                <div className="flight-booking__card-body">
+                <div className="flight-booking__card-body" role="region" aria-label={language === 'vi' ? 'Danh sách chuyến bay đi' : 'Departure flights list'}>
                   {loadingOutbound && <p>{language === 'vi' ? 'Đang tải chuyến bay...' : 'Loading flights...'}</p>}
                   {!loadingOutbound && outboundFlights.length === 0 && (
                     <p className="flight-booking__summary-empty">{language === 'vi' ? 'Không có chuyến bay phù hợp' : 'No matching flights found'}</p>

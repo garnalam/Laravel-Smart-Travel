@@ -83,14 +83,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('tour/generate-schedule', [\App\Http\Controllers\Tour\TourController::class, 'generateSchedule'])->name('tour.generate.schedule');
 
 
-    Route::post('tour/generate-final', function () {
-        $payload = request()->all();
-
-        // Generate final tour using AI or save to database
-        session(['final_tour' => $payload]);
-
-        return redirect()->route('tour.final')->with('success', 'Tour generated successfully!');
-    })->name('tour.generate.final');
+    Route::post('tour/generate-final', [\App\Http\Controllers\Tour\TourController::class, 'generateFinal'])->name('tour.generate.final');
+    Route::post('tour/final', [\App\Http\Controllers\Tour\TourController::class, 'generateFinal'])->name('tour.final.generate');
 
     Route::get('tour/final', function () {
         $finalTour = session('final_tour', null);

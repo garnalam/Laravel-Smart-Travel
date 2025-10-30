@@ -14,6 +14,9 @@ import { useToast } from '@/hooks/useToast';
 import { router, usePage } from '@inertiajs/react';
 import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useTourStorage } from '../../hooks/useTourStorage';
+import { PreferencesSection } from '../../components/common/PreferencesSection';
+import { FinalTourContent } from './FinalTour';
+import type { TourData as FinalTourData } from './FinalTour';
 
 export default function TravelDashboard() {
   const { success, error } = useToast()
@@ -38,6 +41,11 @@ export default function TravelDashboard() {
   const [isReturnFlightOpen, setIsReturnFlightOpen] = useState(false);
   const [selectedReturnFlight, setSelectedReturnFlight] = useState<any>(null);
   const [isFlightSummaryOpen, setIsFlightSummaryOpen] = useState(false);
+  
+  // Dashboard state management
+  const [dashboardView, setDashboardView] = useState<'flight' | 'preferences' | 'final'>('flight');
+  const [finalTourData, setFinalTourData] = useState<FinalTourData | null>(null);
+  
   const totalGuests = adults + children;
   const [formData, setFormData] = useState<Partial<DataTour>>({
     city_id: '',
@@ -90,6 +98,20 @@ export default function TravelDashboard() {
     const all = Object.values(grouped).flat() as any[]
     return all.map((f, i) => mapApiFlightToUI(f, i))
   }
+
+  // Listen for showFinalTour event from PreferencesSection
+  useEffect(() => {
+    const handleShowFinalTour = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { tourData: finalData } = customEvent.detail;
+      setFinalTourData(finalData);
+      setDashboardView('final');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('showFinalTour', handleShowFinalTour);
+    return () => window.removeEventListener('showFinalTour', handleShowFinalTour);
+  }, []);
 
   useEffect(() => {
     const fetchCities = async () => {
@@ -413,6 +435,39 @@ export default function TravelDashboard() {
     success('Form submitted successfully');
     router.post('/tour/preferences', updatedFormData)
   }
+  // Handle closing FinalTour view
+  const handleCloseFinalTour = () => {
+    setFinalTourData(null);
+    setDashboardView('preferences');
+  };
+
+  // Render based on dashboard view
+  if (dashboardView === 'preferences') {
+    return (
+      <>
+        <Navbar />
+        <PreferencesSection 
+          initialTourData={formData}
+          mode="dashboard"
+          onBack={() => setDashboardView('flight')}
+        />
+      </>
+    );
+  }
+
+  if (dashboardView === 'final' && finalTourData) {
+    return (
+      <>
+        <Navbar />
+        <FinalTourContent 
+          tourData={finalTourData}
+          onClose={handleCloseFinalTour}
+          mode="dashboard"
+        />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -570,6 +625,15 @@ export default function TravelDashboard() {
                 Continue to Flight Booking
               </button>
             </div>
+
+            {/* Preferences Button - FOR TESTING ONLY, REMOVE IN PRODUCTION */}
+            {false && (
+              <div className="mt-6">
+                <button onClick={() => setDashboardView('preferences')} className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition">
+                  Go to Preferences (Test)
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Flight Booking Section */}

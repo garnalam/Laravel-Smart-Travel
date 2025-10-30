@@ -544,7 +544,7 @@ class TourController extends Controller
     }
 
     /**
-     * Generate final tour
+     * Generate final tour - API endpoint for dashboard mode
      */
     public function generateFinal(Request $request)
     {
@@ -555,15 +555,27 @@ class TourController extends Controller
             'days' => 'nullable|integer',
             'budget' => 'nullable|numeric',
             'passengers' => 'nullable|integer',
+            'selectedDepartureFlight' => 'nullable|array',
+            'selectedReturnFlight' => 'nullable|array',
         ]);
 
-        session(['final_tour' => $validated]);
+        // If this is a JSON request (from dashboard), return JSON
+        if ($request->expectsJson() || $request->isJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Final tour generated successfully',
+                'tourData' => $validated,
+                'finalTourData' => $validated,
+            ]);
+        }
 
+        // Otherwise, redirect to final tour page
+        session(['final_tour' => $validated]);
         return redirect()->route('tour.final')->with('success', 'Tour generated successfully!');
     }
 
     /**
-     * Show final tour
+     * Show final tour (page route)
      */
     public function showFinal()
     {

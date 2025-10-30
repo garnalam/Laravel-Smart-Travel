@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Navbar } from '../../components/common/Navbar';
-import { Calendar, Utensils, Car, MapPin, Clock, CheckCircle, Download, Share2, Home } from 'lucide-react';
+import { Calendar, Utensils, Car, MapPin, Clock, CheckCircle, Download, Share2, Home, X } from 'lucide-react';
 import { router, usePage } from '@inertiajs/react';
+import type { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { useToast } from '@/hooks/useToast';
-import { start } from 'repl';
-interface ScheduleItem {
+
+export interface ScheduleItem {
   id: string | number;
   place_id?: string;
   type: 'meal' | 'transfer' | 'activity' | 'hotel';
@@ -18,7 +19,7 @@ interface ScheduleItem {
   selectedReturnFlight?: any;
 }
 
-interface DaySchedule {
+export interface DaySchedule {
   day: number;
   date: string;
   completed: boolean;
@@ -26,7 +27,7 @@ interface DaySchedule {
   totalCost: number;
 }
 
-interface TourData {
+export interface TourData {
   schedules: DaySchedule[];
   selectedDepartureFlight?: any;
   selectedReturnFlight?: any;
@@ -36,30 +37,44 @@ interface TourData {
   budget?: number;
   passengers?: number;
 }
-export default function FinalTour() {
-  const { props } = usePage<{ tourData?: TourData, user: any }>();
-  const tourData = props.tourData;
+
+export interface FinalTourProps {
+  tourData?: TourData | null;
+  onClose?: () => void;
+  showNavbar?: boolean;
+  mode?: 'page' | 'dashboard';
+}
+
+function FinalTourContent({ tourData, onClose, mode = 'page' }: Omit<FinalTourProps, 'showNavbar'>) {
+  const { success, error } = useToast()
 
   useEffect(() => {
-    console.log('tourData', props);
+    console.log('tourData', tourData);
   }, [tourData]);
+  
   if (!tourData) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">No Tour Data Found</h1>
-            <p className="text-gray-600 mb-6">Please start a new tour to see your itinerary.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">No Tour Data Found</h1>
+          <p className="text-gray-600 mb-6">Please start a new tour to see your itinerary.</p>
+          {mode === 'dashboard' ? (
+            <button
+              onClick={onClose}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+            >
+              Close
+            </button>
+          ) : (
             <button
               onClick={() => router.visit('/tour/flight')}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
             >
               Start New Tour
             </button>
-          </div>
+          )}
         </div>
-      </>
+      </div>
     );
   }
   const formatCost = (cost: any): string => {
@@ -68,7 +83,6 @@ export default function FinalTour() {
   };
   const schedules = tourData.schedules || [];
   const totalCost = schedules.reduce((sum, schedule) => sum + schedule.totalCost, 0) + ((tourData?.selectedDepartureFlight?.price ?? 0) + (tourData?.selectedReturnFlight?.price ?? 0));
-  const { success, error } = useToast()
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'meal':
@@ -116,8 +130,8 @@ export default function FinalTour() {
         transportation_mode: s.items.map(s => s.type === 'transfer' ? s.transport_mode : null).filter(Boolean),
       })),
       flights: {
-        selectedDepartureFlight : props.tourData?.selectedDepartureFlight,
-        selectedReturnFlight : props.tourData?.selectedReturnFlight,
+        selectedDepartureFlight : tourData.selectedDepartureFlight,
+        selectedReturnFlight : tourData.selectedReturnFlight,
       },
       schedules : schedules.map(s => ({
         day: s.day, totalCost: s.totalCost,
@@ -147,9 +161,20 @@ export default function FinalTour() {
     alert('Share feature coming soon!');
   };
 
+  // Close button header for dashboard mode
+  const closeButton = mode === 'dashboard' && onClose ? (
+    <button
+      onClick={onClose}
+      className="absolute top-4 right-4 z-50 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+      title="Close Final Tour"
+    >
+      <X className="w-6 h-6 text-gray-600" />
+    </button>
+  ) : null;
+
   return (
-    <>
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 p-6" style={{ position: 'relative' }}>
+      {closeButton}
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-6xl mx-auto">
           {/* Success Banner */}
@@ -251,16 +276,47 @@ export default function FinalTour() {
             <p className="text-xl text-blue-50 mb-6">
               Your {schedules.length}-day tour is perfectly planned and ready to go!
             </p>
-            <button
-              onClick={handleBookTour}
-              className="px-8 py-4 bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-lg transition-colors"
-            >
-              save and book tour
-            </button>
+            {mode === 'page' ? (
+              <button
+                onClick={handleBookTour}
+                className="px-8 py-4 bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-lg transition-colors"
+              >
+                save and book tour
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleBookTour}
+                  className="px-8 py-4 bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-lg transition-colors mr-3"
+                >
+                  Save and book tour
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-8 py-4 bg-gray-300 text-gray-700 hover:bg-gray-400 font-bold rounded-lg transition-colors"
+                >
+                  Close
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+export default function FinalTour() {
+  const { props } = usePage<InertiaPageProps & { tourData?: TourData }>();
+  const tourData = props.tourData;
+
+  return (
+    <>
+      <Navbar />
+      <FinalTourContent tourData={tourData} mode="page" />
     </>
   );
 }
+
+export { FinalTourContent };
 
