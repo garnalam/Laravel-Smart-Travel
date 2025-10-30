@@ -19,7 +19,7 @@ import { useTourStorage } from '@/hooks/useTourStorage'
 import { DataTour } from '@/types/domain'
 import { FinalTourModal } from './FinalTourModal'
 import type { TourData } from '@/pages/tour/FinalTour'
-
+import axios from 'axios'
 export type PreferencesSectionMode = 'page' | 'dashboard'
 
 export interface PreferencesSectionProps {
@@ -125,6 +125,14 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
   const [daySchedules, setDaySchedules] = useState(() => getAllDaySchedules())
   const [showFinalTourModal, setShowFinalTourModal] = useState(false)
   const [finalTourData, setFinalTourData] = useState<TourData | null>(null)
+  const [openSummaries, setOpenSummaries] = useState(categories.map(() => true));
+
+  useEffect(() => {
+    setOpenSummaries((prev) => {
+      if (categories.length === prev.length) return prev;
+      return categories.map(() => true);
+    });
+  }, [categories]);
 
   const ensureTourData = (data: Partial<DataTour> | null | undefined) => {
     if (!data) return
@@ -426,6 +434,8 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
       likedItems,
       dislikedItems,
       payload: {
+        city_id: formData.city_id,
+        city_name: formData.destination,
         currentDay,
         budget: formData.budget || 0,
         passengers: formData.passengers || 0,
@@ -469,7 +479,6 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         departure: formData.departure,
         budget_total: formData.budget,
         passengers_total: formData.passengers,
-        city_id: formData.city_id,
         days: formData.days,
         departureDate: formData.departureDate,
         arrivalDate: formData.arrivalDate,
@@ -582,11 +591,25 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
 
       return
     }
-
+    try {
+      await axios.post('/api/tour/save-user-preferences', payload)
+    } catch (error) {
+      console.log(error)
+      
+    }
     router.post('/tour/generate-schedule', payload as any)
   }
 
-  const handleContinueToNextDay = (persist = true) => {
+  const handleContinueToNextDay = async (persist = true) => {
+    const { payload } = buildSchedulePayload()
+    persistDayPreferences()
+    console.log(payload)
+    try{
+      await axios.post('/api/tour/save-user-preferences', payload)
+    }
+    catch(error){
+      console.error(error)
+    }
     if (persist) {
       persistDayPreferences()
     }
@@ -1018,49 +1041,54 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
                       <button
                         type="button"
                         className="dashboard-preferences__collapse"
-                        onClick={() => setIsSummaryOpen((prev) => !prev)}
+                        onClick={() => {
+                          setOpenSummaries(prev => prev.map((open, i) =>
+                            i === categoryIndex ? !open : open
+                          ));
+                        }}
                       >
-                        <ChevronRight className={`w-4 h-4 ${isSummaryOpen ? 'rotate-90' : ''}`} />
+                        <ChevronRight className={`w-4 h-4 ${openSummaries[categoryIndex] ? 'rotate-90' : ''}`} />
                       </button>
                     </header>
+                    {openSummaries[categoryIndex] && (
+                      <div className="dashboard-preferences__list">
+                        {category.items.map((item) => (
+                          <div key={item.id} className="dashboard-preferences__item">
+                            <div className="dashboard-preferences__item-body">
+                              <h4>{item.name}</h4>
+                              <p>{item.category}</p>
+                              <div className="dashboard-preferences__item-meta">
+                                <span>
+                                  <Star className="w-4 h-4" /> {item.rating.toFixed(1)}
+                                </span>
+                                <span>{item.reviews.toLocaleString()} reviews</span>
+                                {item.price && <span>{item.price}</span>}
+                                {item.info && <span>{item.info}</span>}
+                              </div>
+                            </div>
 
-                    <div className="dashboard-preferences__list">
-                      {category.items.map((item) => (
-                        <div key={item.id} className="dashboard-preferences__item">
-                          <div className="dashboard-preferences__item-body">
-                            <h4>{item.name}</h4>
-                            <p>{item.category}</p>
-                            <div className="dashboard-preferences__item-meta">
-                              <span>
-                                <Star className="w-4 h-4" /> {item.rating.toFixed(1)}
-                              </span>
-                              <span>{item.reviews.toLocaleString()} reviews</span>
-                              {item.price && <span>{item.price}</span>}
-                              {item.info && <span>{item.info}</span>}
+                            <div className="dashboard-preferences__item-actions">
+                              <button
+                                type="button"
+                                onClick={() => togglePreference(categoryIndex, item.id, 'like')}
+                                className={`dashboard-preferences__pill ${item.liked ? 'is-active' : ''}`}
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                                <span>{language === 'vi' ? 'Ưa thích' : 'Like'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => togglePreference(categoryIndex, item.id, 'dislike')}
+                                className={`dashboard-preferences__pill ${item.disliked ? 'is-active' : ''}`}
+                              >
+                                <ThumbsDown className="w-4 h-4" />
+                                <span>{language === 'vi' ? 'Tránh' : 'Skip'}</span>
+                              </button>
                             </div>
                           </div>
-
-                          <div className="dashboard-preferences__item-actions">
-                            <button
-                              type="button"
-                              onClick={() => togglePreference(categoryIndex, item.id, 'like')}
-                              className={`dashboard-preferences__pill ${item.liked ? 'is-active' : ''}`}
-                            >
-                              <ThumbsUp className="w-4 h-4" />
-                              <span>{language === 'vi' ? 'Ưa thích' : 'Like'}</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => togglePreference(categoryIndex, item.id, 'dislike')}
-                              className={`dashboard-preferences__pill ${item.disliked ? 'is-active' : ''}`}
-                            >
-                              <ThumbsDown className="w-4 h-4" />
-                              <span>{language === 'vi' ? 'Tránh' : 'Skip'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </article>
                 ))}
               </div>

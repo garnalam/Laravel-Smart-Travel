@@ -121,13 +121,24 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
 
   // 7. Memoize các giá trị tính toán
   const locationOptions = useMemo(() => cities.map((city: City) => ({
-    value: city.city.toString(),
+    value: city.city,
     label: `${city.city}, ${city.country}`,
-  })), [cities]) // Chỉ tính toán lại khi 'cities' thay đổi
+    id: city.id,
+    country: city.country,
+  })), [cities]) // Thêm id/country vào option
 
   const handleDropdownChange = useCallback((field: keyof DataTour) => (event: any) => {
-    setFormData((prev) => ({ ...prev, [field]: event.value }))
-  }, []) // Hàm này không đổi, nên dependency rỗng
+    if (field === 'destination') {
+      const selectedCity = cities.find(city => city.city === event.value)
+      setFormData((prev) => ({
+        ...prev,
+        destination: event.value,
+        city_id: selectedCity ? selectedCity.id : undefined,
+      }))
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: event.value }))
+    }
+  }, [cities]); // Memo lại khi cities thay đổi
 
   const renderGuestLabel = useCallback(() => {
     // 8. Đọc state trực tiếp từ formData
@@ -334,7 +345,7 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
                   optionValue="value"
                   placeholder={language === 'vi' ? 'Tìm kiếm điểm khởi hành...' : 'Search departure...'}
                   filter
-                  showClear
+                  showClear={false}
                   loading={loadingCities}
                   className="dashboard-form__prime"
                   panelClassName="dashboard-form__prime-panel"
@@ -353,7 +364,7 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
                   optionValue="value"
                   placeholder={language === 'vi' ? 'Tìm kiếm điểm đến...' : 'Search destination...'}
                   filter
-                  showClear
+                  showClear={false}
                   loading={loadingCities}
                   className="dashboard-form__prime"
                   panelClassName="dashboard-form__prime-panel"

@@ -31,6 +31,7 @@ export interface SharedData {
     // THAY ĐỔI QUAN TRỌNG: Thay thế hàm `__` bằng object chứa các bản dịch
     translations: Record<string, string>;
     [key: string]: unknown;
+    
 }
 
 export interface User {
