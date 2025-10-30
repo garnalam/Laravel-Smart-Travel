@@ -17,6 +17,8 @@ import { router } from '@inertiajs/react'
 import { useAppStore } from '@/store/useAppStore'
 import { useTourStorage } from '@/hooks/useTourStorage'
 import { DataTour } from '@/types/domain'
+import { FinalTourModal } from './FinalTourModal'
+import type { TourData } from '@/pages/tour/FinalTour'
 
 export type PreferencesSectionMode = 'page' | 'dashboard'
 
@@ -121,6 +123,8 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
   const [isSummaryOpen, setIsSummaryOpen] = useState(true)
   const [currentDay, setCurrentDay] = useState<number>(1)
   const [daySchedules, setDaySchedules] = useState(() => getAllDaySchedules())
+  const [showFinalTourModal, setShowFinalTourModal] = useState(false)
+  const [finalTourData, setFinalTourData] = useState<TourData | null>(null)
 
   const ensureTourData = (data: Partial<DataTour> | null | undefined) => {
     if (!data) return
@@ -689,12 +693,10 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         throw new Error(language === 'vi' ? 'Không nhận được dữ liệu tour' : 'No final tour data received')
       }
 
-      // Trigger callback to parent component (Dashboard) to show FinalTour
+      // Show FinalTourModal in dashboard mode, or redirect in page mode
       if (mode === 'dashboard') {
-        const event = new CustomEvent('showFinalTour', { 
-          detail: { tourData: finalData } 
-        })
-        window.dispatchEvent(event)
+        setFinalTourData(finalData)
+        setShowFinalTourModal(true)
       } else {
         // Fallback to navigation for non-dashboard mode
         router.visit('/tour/final', { data: { tourData: finalData } })
@@ -1093,6 +1095,74 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
           </div>
         </div>
       </div>
+
+      {/* Final Tour Modal */}
+      <FinalTourModal
+        tourData={finalTourData}
+        isOpen={showFinalTourModal}
+        onClose={() => {
+          setShowFinalTourModal(false)
+          setFinalTourData(null)
+        }}
+        language={language as 'vi' | 'en'}
+        onBookTour={(tourData) => {
+          const data_payment = {
+            departure: tourData.departure,
+            days: tourData.schedules?.length || 1,
+            passengers: tourData.passengers,
+            days_cost: tourData.schedules?.map((s) => s.totalCost) || [],
+            total_cost:
+              (tourData.schedules?.reduce((sum, s) => sum + s.totalCost, 0) || 0) +
+              ((tourData?.selectedDepartureFlight?.price ?? 0) + (tourData?.selectedReturnFlight?.price ?? 0)),
+            flight_cost: (tourData?.selectedDepartureFlight?.price ?? 0) + (tourData?.selectedReturnFlight?.price ?? 0),
+            start_date: tourData.schedules?.[0]?.date?.split(',')[1]?.trim() || new Date().toISOString().split('T')[0],
+            itinerary:
+              tourData.schedules?.map((s) => ({
+                day: s.day,
+                date: s.date,
+                completed: s.completed,
+                totalCost: s.totalCost,
+                hotel_id: s.items.filter((item) => item.type === 'hotel').map((item) => item.place_id),
+                restaurants_id: s.items.filter((item) => item.type === 'meal').map((item) => item.place_id),
+                activities_id: s.items.filter((item) => item.type === 'activity').map((item) => item.place_id),
+                transportation_mode: s.items.filter((item) => item.type === 'transfer').map((item) => item.transport_mode),
+              })) || [],
+            flights: {
+              selectedDepartureFlight: tourData.selectedDepartureFlight,
+              selectedReturnFlight: tourData.selectedReturnFlight,
+            },
+            schedules:
+              tourData.schedules?.map((s) => ({
+                day: s.day,
+                totalCost: s.totalCost,
+                items: s.items.map((i) => ({
+                  id: i.id,
+                  place_id: i.place_id,
+                  type: i.type,
+                  startTime: i.startTime,
+                  endTime: i.endTime,
+                  title: i.title,
+                  cost: i.cost,
+                  transport_mode: i.transport_mode,
+                })),
+              })) || [],
+          }
+
+          router.post('/tour/save-tour-data', data_payment, {
+            onSuccess: () => {
+              setShowFinalTourModal(false)
+              setFinalTourData(null)
+            },
+            onError: (errors) => {
+              console.error('Error saving tour:', errors)
+              setFeedback({
+                type: 'error',
+                message: language === 'vi' ? 'Không thể lưu dữ liệu tour' : 'Failed to save tour data',
+              })
+            },
+          })
+        }}
+      />
     </section>
   )
 }
