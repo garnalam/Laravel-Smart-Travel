@@ -509,11 +509,19 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         setIsSaving(true)
         setFeedback(null)
 
+        // Get CSRF token from meta tag
+        const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+        
+        if (!csrfToken) {
+          throw new Error('CSRF token not found. Please refresh the page and try again.')
+        }
+
         const response = await fetch('/tour/generate-schedule', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json',
           },
           body: JSON.stringify({
             ...payload,
@@ -521,9 +529,21 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
           }),
         })
 
+        // Check if response is actually JSON
+        const contentType = response.headers.get('content-type')
+        if (!contentType || !contentType.includes('application/json')) {
+          console.error('Response content-type:', contentType)
+          throw new Error('Server returned invalid response. Please check your connection and try again.')
+        }
+
         const data = await response.json()
 
-        if (!response.ok || !data.success) {
+        if (!response.ok) {
+          const errorMessage = data.message || `Server error: ${response.status}`
+          throw new Error(errorMessage)
+        }
+
+        if (!data.success) {
           throw new Error(data.message || 'Failed to generate schedule')
         }
 
@@ -543,9 +563,14 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         }
       } catch (error: any) {
         console.error('Error generating schedule:', error)
+        const errorMsg = error?.message || 
+          (language === 'vi' 
+            ? 'Không thể tạo lịch trình. Vui lòng thử lại.' 
+            : 'Unable to generate schedule. Please try again.')
+        
         setFeedback({
           type: 'error',
-          message: error?.message || (language === 'vi' ? 'Không thể tạo lịch trình. Vui lòng thử lại.' : 'Unable to generate schedule. Please try again.'),
+          message: errorMsg,
         })
       } finally {
         setIsSaving(false)
@@ -618,19 +643,38 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
 
     setIsGeneratingFinal(true)
     try {
+      // Get CSRF token from meta tag
+      const csrfToken = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content
+      
+      if (!csrfToken) {
+        throw new Error('CSRF token not found. Please refresh the page and try again.')
+      }
+
       const response = await fetch('/tour/generate-final', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
         },
         body: JSON.stringify(payload),
       })
 
+      // Check if response is actually JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error('Response content-type:', contentType)
+        throw new Error('Server returned invalid response. Please check your connection and try again.')
+      }
+
       const data = await response.json()
 
-      if (!response.ok || !data.success) {
+      if (!response.ok) {
+        const errorMessage = data.message || `Server error: ${response.status}`
+        throw new Error(errorMessage)
+      }
+
+      if (!data.success) {
         throw new Error(data.message || 'Failed to generate final tour')
       }
 

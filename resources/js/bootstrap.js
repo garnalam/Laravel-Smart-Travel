@@ -11,7 +11,12 @@ axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 const csrfMetaToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 if (csrfMetaToken) {
   axios.defaults.headers.common['X-CSRF-TOKEN'] = csrfMetaToken;
+  // Also set in HTTP method headers for all requests
+  axios.defaults.headers.post['X-CSRF-TOKEN'] = csrfMetaToken;
+  axios.defaults.headers.put['X-CSRF-TOKEN'] = csrfMetaToken;
+  axios.defaults.headers.patch['X-CSRF-TOKEN'] = csrfMetaToken;
+  axios.defaults.headers.delete['X-CSRF-TOKEN'] = csrfMetaToken;
 } else {
-  console.warn('[bootstrap] CSRF meta token not found');
+  console.warn('[bootstrap] CSRF meta token not found in meta[name="csrf-token"]');
+  console.warn('[bootstrap] Make sure app.blade.php includes: <meta name="csrf-token" content="{{ csrf_token() }}">');
 }
-

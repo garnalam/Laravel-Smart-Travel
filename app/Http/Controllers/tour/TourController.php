@@ -47,13 +47,16 @@ class TourController extends Controller
         
         $validated = $request->all();
 
+        // Determine if this is a dashboard API request
         $isDashboardRequest = $request->boolean('dashboard_mode')
             || $request->input('mode') === 'dashboard'
-            || $request->expectsJson();
+            || $request->expectsJson()
+            || $request->header('Accept') === 'application/json';
 
         // Save tour data to session
         session(['tour_data' => $validated]);
         Log::info('Tour data', $validated);
+        
         try {
             // Query places data by IDs from liked items
             $placesData = $this->queryPlacesData($validated);
@@ -84,11 +87,12 @@ class TourController extends Controller
                 ]);
 
                 if ($isDashboardRequest) {
+                    // Return 200 with success: false to avoid CORS and parsing issues
                     return response()->json([
                         'success' => false,
                         'message' => 'Failed to generate schedule: ' . ($result['error'] ?? 'Unknown error'),
                         'scheduleData' => $this->generateFallbackSchedule($validated),
-                    ], 502);
+                    ], 200);
                 }
 
                 return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
@@ -108,9 +112,10 @@ class TourController extends Controller
             if ($isDashboardRequest) {
                 return response()->json([
                     'success' => true,
+                    'message' => 'Schedule generated successfully',
                     'scheduleData' => $scheduleData,
                     'tourInfo' => $result['data']['tour_info'] ?? null,
-                ]);
+                ], 200);
             }
 
             return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
@@ -126,11 +131,12 @@ class TourController extends Controller
             ]);
 
             if ($isDashboardRequest) {
+                // Return 200 with success: false to avoid CORS and parsing issues
                 return response()->json([
                     'success' => false,
-                    'message' => 'An error occurred while generating schedule. Please try again.',
+                    'message' => 'An error occurred while generating schedule: ' . $e->getMessage(),
                     'scheduleData' => $this->generateFallbackSchedule($validated),
-                ], 500);
+                ], 200);
             }
 
             return redirect()->route('tour.schedule', ['day' => $validated['currentDay'] ?? 1])->with([
