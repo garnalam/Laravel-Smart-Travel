@@ -1,0 +1,43 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\city\CityController;
+use App\Http\Controllers\place\PlaceController;
+use App\Http\Controllers\place\PlaceFetchController;
+use App\Http\Controllers\AI\AIRecommendationController;
+use App\Http\Controllers\tour\TourController;
+use App\Http\Controllers\Flight\FlightController;
+
+// Test MongoDB connection
+Route::get('/test-mongo', [CityController::class, 'testMongo'])->name('test.mongo');
+
+// City routes
+Route::get('/cities', [CityController::class, 'getAllCities'])->name('cities.all');
+Route::get('/city', [CityController::class, 'getCity'])->name('city.get');
+Route::get('/cities/country/{country}', [CityController::class, 'getCitiesByCountry'])->name('cities.by_country');
+Route::get('/cities/popular', [CityController::class, 'getPopularCities'])->name('cities.popular');
+Route::get('/city/{id}', [CityController::class, 'getCityById'])->name('city.by_id');
+
+// Place routes
+Route::get('/places/test-mongo', [PlaceController::class, 'testMongo'])->name('places.test.mongo');
+Route::get('/places/debug-metadata', [PlaceController::class, 'debugMetadata'])->name('places.debug.metadata');
+Route::get('/places/city', [PlaceController::class, 'getPlacesByCity'])->name('places.by_city');
+Route::get('/places/type', [PlaceController::class, 'getPlacesByType'])->name('places.by_type');
+Route::get('/places/tour-preferences', [PlaceController::class, 'getPlacesForTourPreferences'])->name('places.tour_preferences');
+
+// Tour routes (protected by auth middleware)
+Route::middleware(['auth:web'])->group(function () {
+    Route::post('/tour/save-user-preferences', [TourController::class, 'saveUserPreferences'])->name('tour.save.user.preferences');
+});
+// AI Recommendation routes (Python API integration)
+Route::prefix('ai')->group(function () {
+    Route::post('/recommendations', [AIRecommendationController::class, 'getRecommendations'])->name('ai.recommendations');
+    Route::post('/recommendations/by-city-name', [AIRecommendationController::class, 'getRecommendationsByCityName'])->name('ai.recommendations.by_city');
+    Route::get('/cities', [AIRecommendationController::class, 'getCities'])->name('ai.cities');
+    Route::get('/health', [AIRecommendationController::class, 'healthCheck'])->name('ai.health');
+});
+
+// Flight Search routes
+Route::prefix('flight')->group(function () {
+    Route::post('/search', [FlightController::class, 'searchFlights'])->name('flight.search');
+});

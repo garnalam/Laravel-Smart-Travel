@@ -113,8 +113,8 @@ return [
         ],
         'mongodb' => [
             'driver' => 'mongodb',
-            'dsn' => env('DB_MONGODB_DSN'),
-            'database' => env('DB_DATABASE', 'mydatabase'),
+            'dsn' => env('MONGODB_DSN'),
+            'database' => env('DB_DATABASE', 'smart_travel'),
         ],
 
     ],

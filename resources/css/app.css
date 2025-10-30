@@ -7,6 +7,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@tailwind utilities;
 @theme {
     --font-sans:
         'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
@@ -140,4 +141,241 @@
     body {
         @apply bg-background text-foreground;
     }
+}
+
+/* Toast animations */
+@keyframes slide-in-right {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Guest Counter UI Styles */
+.counter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  border-bottom: 1px solid var(--color-border, #333);
+}
+.counter-row:last-child {
+  border-bottom: none;
+}
+.counter-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.counter-label strong {
+  font-size: 1.10rem;
+  font-weight: bold;
+  color: var(--color-card-foreground, #fff);
+}
+.counter-label span {
+  font-size: 0.92rem;
+  color: var(--muted-foreground, #aaa);
+  margin-top: 0.2rem;
+}
+.counter-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.counter-btn {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.4rem;
+  color: var(--color-primary-foreground, #fff);
+  background: linear-gradient(145deg, #313947 60%, #222a36 100%);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(10,12,15,0.13);
+  transition: background 0.18s, box-shadow 0.18s, color 0.15s;
+}
+.counter-btn:active {
+  background: linear-gradient(145deg, #1b2332 80%, #11151c 100%);
+}
+.counter-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.counter-buttons span {
+  font-size: 1.2rem;
+  min-width: 2rem;
+  text-align: center;
+  color: var(--color-primary-foreground, #fff);
+}
+.guest-counter-panel {
+  background: linear-gradient(135deg, #192029 75%, #181e26 100%);
+  border-radius: 1.1rem;
+  box-shadow: 0 8px 32px 0 rgba(15,24,40,0.25);
+  padding: 1.1rem 1.1rem 1.5rem 1.1rem;
+  min-width: 290px;
+  width: 100%;
+  max-width: 310px;
+}
+.done-button {
+  margin-top: 1.4rem;
+  width: 100%;
+  padding: 0.8rem 0;
+  background: linear-gradient(90deg, #ffd7a9, #fbbf77 95%);
+  color: #313132;
+  border: none;
+  border-radius: 0.8rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 18px 0 rgba(250,203,119,0.10);
+  cursor: pointer;
+  transition: background 0.18s, color 0.16s;
+}
+.done-button:hover,
+.done-button:focus {
+  background: linear-gradient(90deg, #ffb74c 80%, #ff9a20 100%);
+  color: #1b1b1c;
+}
+
+/* Adjust ticket list to scroll only, without forcing card min-height */
+.flight-booking__card-body {
+  max-height: 320px; /* Height for 3 tickets, adjust as needed */
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-right: 8px;
+}
+
+.flight-booking__flight {
+  margin-bottom: 1rem;
+  border-radius: 18px;
+  background: var(--color-card, #232a32);
+  box-shadow: 0 2px 12px 0 rgba(30,42,60,0.11);
+  border: 1.5px solid transparent;
+  transition: box-shadow 0.2s, border 0.2s;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch;
+  padding: 1.1rem 1.3rem;
+}
+.flight-booking__flight:last-child {
+  margin-bottom: 0;
+}
+.flight-booking__flight--selected {
+  border-color: #ffb74c;
+  box-shadow: 0 0 0 2px #ffd7a930;
+}
+/* Optional: simple scroll style for tickets only */
+.flight-booking__card-body::-webkit-scrollbar {
+  width: 8px;
+}
+.flight-booking__card-body::-webkit-scrollbar-thumb {
+  background: #dde3ef;
+  border-radius: 6px;
+}
+.flight-booking__card-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+/* Restore base flex spacings for ticket content, in case missing */
+.flight-booking__flight-info {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.flight-booking__airline {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-bottom: 0.4rem;
+}
+.flight-booking__airline-code {
+  font-weight: bold;
+  color: #ffa500;
+}
+.flight-booking__airline-name {
+  color: #fffab7;
+}
+.flight-booking__schedule {
+  display: flex;
+  align-items: center;
+  gap: 1.8rem;
+}
+.flight-booking__time {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 1.09rem;
+}
+.flight-booking__time-value {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #ffd07e;
+}
+.flight-booking__time-code {
+  color: #c1c6cf;
+  font-size: 0.97rem;
+}
+.flight-booking__duration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  color: #86a0b7;
+  font-size: 0.99rem;
+}
+.flight-booking__line {
+  width: 32px;
+  height: 2px;
+  background: linear-gradient(90deg, #fd0 33%, #ffa72f 100%);
+  border-radius: 4px;
+  margin: 0.15rem 0;
+}
+.flight-booking__flight-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 100px;
+  gap: 0.7rem;
+}
+.flight-booking__price {
+  font-weight: bold;
+  color: #ffcf6f;
+  font-size: 1.1rem;
+}
+.flight-booking__select {
+  background: linear-gradient(90deg, #ffd7a9, #fbbf77 95%);
+  color: #313132;
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.33rem 0.88rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.16s, color 0.13s;
+}
+.flight-booking__select:hover,
+.flight-booking__select:focus {
+  background: linear-gradient(90deg, #ffb74c 80%, #ff9a20 100%);
+}
+
+/* Preferences list: Scroll for >3 items */
+.dashboard-preferences__list {
+  max-height: 310px; /* Adjust if your item is taller/shorter, 3-item height */
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding-right: 6px;
+}
+.dashboard-preferences__list::-webkit-scrollbar {
+  width: 7px;
+}
+.dashboard-preferences__list::-webkit-scrollbar-thumb {
+  background: #e4e8fa;
+  border-radius: 6px;
+}
+.dashboard-preferences__list::-webkit-scrollbar-track {
+  background: transparent;
 }

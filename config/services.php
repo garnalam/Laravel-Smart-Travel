@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'python_api' => [
+        'url' => env('PYTHON_API_URL', 'http://localhost:8000'),
+        'timeout' => env('PYTHON_API_TIMEOUT', 300),
+        'api_key' => env('PYTHON_API_KEY'),
+    ],
+
 ];
