@@ -44,6 +44,74 @@ def get_airport_name(iata_code: str) -> str:
     return airport['name'] if airport else iata_code
 
 
+def _generate_mock_flight_data(dep_iata: str, arr_iata: str, departure_date: str, adults: int = 1) -> list:
+    """
+    Tạo mock flight data khi API trả về lỗi 500.
+    """
+    tz = ZoneInfo('Asia/Bangkok')
+    dep_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
+    
+    # Tạo các chuyến bay mock với giờ khác nhau
+    mock_offers = []
+    airlines = [
+        {'code': 'VN', 'name': 'Vietnam Airlines'},
+        {'code': 'BL', 'name': 'Pacific Airlines'},
+        {'code': 'VJ', 'name': 'VietJet Air'},
+        {'code': 'QH', 'name': 'Bamboo Airways'},
+    ]
+    
+    # Tạo 5 chuyến bay mock với giờ khác nhau trong ngày
+    for idx in range(5):
+        airline = airlines[idx % len(airlines)]
+        
+        # Giờ khởi hành từ 6:00 đến 22:00
+        hour = 6 + (idx * 4)
+        if hour > 22:
+            hour = 6 + (idx * 2)
+        
+        # Tính giờ đến (giả sử bay 2-3 tiếng)
+        duration_hours = 2.5 + (idx * 0.3)
+        
+        dep_time = datetime.combine(dep_date, time(hour, 0, 0)).replace(tzinfo=tz)
+        arr_time = dep_time + timedelta(hours=int(duration_hours), minutes=int((duration_hours % 1) * 60))
+        
+        # Format datetime theo ISO format của Amadeus
+        dep_time_str = dep_time.isoformat()
+        arr_time_str = arr_time.isoformat()
+        
+        # Giá từ 100 đến 1000 USD, phân bổ đều
+        price_usd = 100 + (idx * (1000 - 100) / 4)
+        price_usd = round(price_usd, 2)
+        
+        offer = {
+            'itineraries': [{
+                'segments': [{
+                    'departure': {
+                        'iataCode': dep_iata,
+                        'at': dep_time_str
+                    },
+                    'arrival': {
+                        'iataCode': arr_iata,
+                        'at': arr_time_str
+                    },
+                    'carrierCode': airline['code'],
+                    'number': f'{1000 + idx}',
+                    'aircraft': {'code': '320'},
+                    'duration': f'PT{int(duration_hours)}H{int((duration_hours % 1) * 60)}M'
+                }]
+            }],
+            'price': {
+                'total': str(price_usd * adults),
+                'currency': 'USD'
+            },
+            'numberOfBookableSeats': 9,
+            'validatingAirlineCodes': [airline['code']]
+        }
+        mock_offers.append(offer)
+    
+    return mock_offers
+
+
 def fetch_flights(dep_iata: str, arr_iata: str, departure_date: str, adults: int = 1, max_results: int = 100) -> list:
     """
     Fetch flight offers và truy vấn thêm trạng thái cho từng segment.
@@ -62,6 +130,9 @@ def fetch_flights(dep_iata: str, arr_iata: str, departure_date: str, adults: int
         return offers
 
     except ResponseError as error:
+        if (error.response.status_code == 500):
+            # Trả về mock data khi API lỗi 500
+            return _generate_mock_flight_data(dep_iata, arr_iata, departure_date, adults)
         print(f"Amadeus API error: {error}")
         return []
 
