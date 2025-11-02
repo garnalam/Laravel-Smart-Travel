@@ -284,12 +284,16 @@ def get_gemini_travel_recommendations(user_input: UserTourInfo, destination_name
             itinerary_data = json.loads(result_text.strip())
             print(itinerary_data)
             # Post-process transport preferences
-            liked_modes = [m.lower() for m in user_prefs.get('liked_transport', [])]
-            disliked_modes = [m.lower() for m in user_prefs.get('disliked_transport', [])]
+            # Lọc chỉ các chuỗi hợp lệ trước khi lower
+            liked_modes = [m.lower() for m in user_prefs.get('liked_transport', []) if isinstance(m, str) and m]
+            disliked_modes = [m.lower() for m in user_prefs.get('disliked_transport', []) if isinstance(m, str) and m]
+
             for day in itinerary_data.get('days', []):
                 for activity in day.get('activities', []):
                     if activity.get('type') == 'transfer':
-                        current_mode = activity.get('transport_mode', 'taxi').lower()
+                        # Lấy mode hiện tại an toàn (None -> 'taxi')
+                        raw_mode = activity.get('transport_mode')
+                        current_mode = (raw_mode if isinstance(raw_mode, str) and raw_mode else 'taxi').lower()
                         
                         if liked_modes:
                             import random
