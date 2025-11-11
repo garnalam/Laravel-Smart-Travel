@@ -9,13 +9,13 @@ import airportsdata
 from functools import lru_cache
 import csv
 import os
-
+import config
 LOCAL_TZ = ZoneInfo('Asia/Bangkok')  # Múi giờ địa phương
 
 # Khởi tạo Amadeus API client
 AMADEUS = Client(
-    client_id='aDGISIQtyCV5sb9N4EurAh1TKQKwEhtS',
-    client_secret='KztfC0Hut3A7BgdZ'
+    client_id='iKYAAVETn9wlZKVev55sZtUtG5zKcWiw',
+    client_secret='YSXq6EV7lWHItB9D'
 )
 
 # Tải dữ liệu sân bay
