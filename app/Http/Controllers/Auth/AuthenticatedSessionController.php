@@ -19,6 +19,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(Request $request): Response
     {
+        // === SỬA LẠI ĐÂY ===
+        // Đổi trở lại thành 'auth/login' (chữ thường)
+        // để khớp với cấu hình trong app.tsx (vốn đang dùng 'pages/' chữ thường)
         return Inertia::render('auth/login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => $request->session()->get('status'),
