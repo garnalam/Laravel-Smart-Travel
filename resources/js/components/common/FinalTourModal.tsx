@@ -24,6 +24,46 @@ export function FinalTourModal({
     return isNaN(numCost) ? '0.00' : numCost.toFixed(2)
   }
 
+  const formatDate = (dateString: string): string => {
+    if (!dateString) return ''
+    const date = new Date(dateString)
+    return date.toLocaleDateString(language === 'vi' ? 'vi-VN' : 'en-US', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })
+  }
+
+  const calculateDate = (dayIndex: number): string => {
+    // Sử dụng departureDate từ tourData
+    const departureDate = (tourData as any).departureDate
+    
+    // Nếu không có departureDate, lấy từ schedule đầu tiên và tính toán
+    let baseDate: Date
+    
+    if (departureDate) {
+      const [year, month, day] = departureDate.split('-').map(Number)
+      baseDate = new Date(year, month - 1, day)
+    } else if (schedules[0]?.date) {
+      // Parse từ schedule đầu tiên (format: "Thursday, November 20, 2025")
+      baseDate = new Date(schedules[0].date)
+    } else {
+      return ''
+    }
+    
+    // Tính ngày hiện tại bằng cách cộng dayIndex
+    const currentDate = new Date(baseDate)
+    currentDate.setDate(baseDate.getDate() + dayIndex)
+    
+    return currentDate.toLocaleDateString(language === 'vi' ? 'vi-VN' : 'en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
   const schedules = tourData.schedules || []
   const totalCost =
     schedules.reduce((sum, schedule) => sum + schedule.totalCost, 0) +
@@ -141,7 +181,7 @@ export function FinalTourModal({
                       <h3 className="text-2xl font-bold text-gray-900">
                         {language === 'vi' ? `Ngày ${dayIndex + 1}` : `Day ${dayIndex + 1}`}
                       </h3>
-                      <p className="text-gray-600">{schedule.date}</p>
+                      <p className="text-gray-600">{calculateDate(dayIndex)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-gray-600">{language === 'vi' ? 'Chi phí ngày' : 'Day Cost'}</p>
