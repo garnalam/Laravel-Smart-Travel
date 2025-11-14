@@ -1,101 +1,117 @@
 import { dashboard, login, register } from '@/routes';
-import { type SharedData } from '@/types';
+import { SharedPageProps } from '@/types/inertia';
+import { useLocalization } from '@/lib/localization';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { useLocalization } from '@/lib/localization'; // BƯỚC 1: Import hook mới
+import React, { useMemo } from 'react';
 
 export default function Welcome() {
-    // BƯỚC 2: Sử dụng hook mới để lấy hàm dịch thuật
-    const { auth } = usePage<SharedData>().props;
+    const { auth } = usePage<SharedPageProps & Record<string, any>>().props;
     const __ = useLocalization();
 
-    // Dữ liệu và phần còn lại của component không thay đổi
-    const featuredTours = [
-        {
-            name: __('tours.hanoi.name'),
-            location: __('tours.hanoi.location'),
-            duration: __('tours.hanoi.duration'),
-            price: '2.480',
-            image:
-                'https://marketplace.canva.com/wgNe8/MAFaRvwgNe8/1/tl/canva-hoan-kiem-lake-MAFaRvwgNe8.jpg',
-        },
-        {
-            name: __('tours.danang.name'),
-            location: __('tours.danang.location'),
-            duration: __('tours.danang.duration'),
-            price: '890',
-            image:
-                'https://media.vneconomy.vn/images/upload/2023/08/30/cau-vang-nag-tran-tuan-viet-5.jpg',
-        },
-        {
-             name: __('tours.paris.name'),
-            location: __('tours.paris.location'),
-            duration: __('tours.paris.duration'),
-            price: '3.950',
-            image:
-                'https://c4.wallpaperflare.com/wallpaper/150/935/583/paris-4k-download-beautiful-for-desktop-wallpaper-preview.jpg',
-        },
-    ];
+    // Sử dụng useMemo để tránh tạo lại mảng trên mỗi lần render
+    // Chúng chỉ được tạo lại khi hàm dịch thuật (ngôn ngữ) thay đổi
+    const featuredTours = useMemo(
+        () => [
+            {
+                name: __('tours.hanoi.name'),
+                location: __('tours.hanoi.location'),
+                duration: __('tours.hanoi.duration'),
+                price: '2.480',
+                image: 'https://marketplace.canva.com/wgNe8/MAFaRvwgNe8/1/tl/canva-hoan-kiem-lake-MAFaRvwgNe8.jpg',
+            },
+            {
+                name: __('tours.danang.name'),
+                location: __('tours.danang.location'),
+                duration: __('tours.danang.duration'),
+                price: '890',
+                image: 'https://media.vneconomy.vn/images/upload/2023/08/30/cau-vang-nag-tran-tuan-viet-5.jpg',
+            },
+            {
+                name: __('tours.paris.name'),
+                location: __('tours.paris.location'),
+                duration: __('tours.paris.duration'),
+                price: '3.950',
+                image: 'https://c4.wallpaperflare.com/wallpaper/150/935/583/paris-4k-download-beautiful-for-desktop-wallpaper-preview.jpg',
+            },
+        ],
+        [__],
+    );
 
-    const signatureExperiences = [
-        {
-            title: __('experiences.flight_integration.title'),
-            description: __('experiences.flight_integration.description'),
-        },
-        {
-            title: __('experiences.smart_suggestion.title'),
-            description: __('experiences.smart_suggestion.description'),
-        },
-        {
-            title: __('experiences.detailed_itinerary.title'),
-            description: __('experiences.detailed_itinerary.description'),
-        },
-        {
-            title: __('experiences.budget_sync.title'),
-            description: __('experiences.budget_sync.description'),
-        },
-    ];
+    const signatureExperiences = useMemo(
+        () => [
+            {
+                title: __('experiences.flight_integration.title'),
+                description: __('experiences.flight_integration.description'),
+            },
+            {
+                title: __('experiences.smart_suggestion.title'),
+                description: __('experiences.smart_suggestion.description'),
+            },
+            {
+                title: __('experiences.detailed_itinerary.title'),
+                description: __('experiences.detailed_itinerary.description'),
+            },
+            {
+                title: __('experiences.budget_sync.title'),
+                description: __('experiences.budget_sync.description'),
+            },
+        ],
+        [__],
+    );
 
-    const travelStories = [
-        {
-            quote: __('stories.huong.quote'),
-            author: __('stories.huong.author'),
-        },
-        {
-            quote: __('stories.tan.quote'),
-            author: __('stories.tan.author'),
-        },
-    ];
-    
-    const stats = [
-        { label: __('stats.optimized_journeys'), value: '1.2K+' },
-        { label: __('stats.satisfied_customers'), value: '98%' },
-        { label: __('stats.partner_countries'), value: '36' },
-    ];
+    const travelStories = useMemo(
+        () => [
+            {
+                quote: __('stories.huong.quote'),
+                author: __('stories.huong.author'),
+            },
+            {
+                quote: __('stories.tan.quote'),
+                author: __('stories.tan.author'),
+            },
+        ],
+        [__],
+    );
 
-    const planningSteps = [
-        {
-            title: __('steps.step1.title'),
-            description: __('steps.step1.description'),
-        },
-        {
-            title: __('steps.step2.title'),
-            description: __('steps.step2.description'),
-        },
-        {
-            title: __('steps.step3.title'),
-            description: __('steps.step3.description'),
-        },
-    ];
+    const stats = useMemo(
+        () => [
+            { label: __('stats.optimized_journeys'), value: '1.2K+' },
+            { label: __('stats.satisfied_customers'), value: '98%' },
+            { label: __('stats.partner_countries'), value: '36' },
+        ],
+        [__],
+    );
 
+    const planningSteps = useMemo(
+        () => [
+            {
+                title: __('steps.step1.title'),
+                description: __('steps.step1.description'),
+            },
+            {
+                title: __('steps.step2.title'),
+                description: __('steps.step2.description'),
+            },
+            {
+                title: __('steps.step3.title'),
+                description: __('steps.step3.description'),
+            },
+        ],
+        [__],
+    );
 
     return (
-        <>
+        <React.Fragment>
             <Head title={__('welcome.meta_title')}>
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700"
                     rel="stylesheet"
                 />
+                {/* Gợi ý: Bạn có thể đưa nội dung CSS trong thẻ <style> này 
+                  ra một file CSS riêng (ví dụ: Welcome.css) và import vào đây
+                  để component gọn gàng hơn.
+                */}
                 <style
                     dangerouslySetInnerHTML={{
                         __html: `
@@ -124,20 +140,20 @@ export default function Welcome() {
                 />
             </Head>
             <div className="relative min-h-screen bg-gradient-to-br from-[#09131A] via-[#12303B] to-[#1A3D4B] text-[#F6F1E7]">
-            <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-                {/* Giữ lại ảnh nền và lớp màu xanh đen phủ lên */}
-                <img
-                    src=""
-                    alt={__('welcome.background_alt')}
-                    className="h-full w-full object-cover opacity-30 brightness-[1.08]"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(11,24,31,0.92),rgba(14,31,41,0.55)_42%,rgba(26,61,75,0.75))]" />
+                <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+                    {/* Giữ lại ảnh nền và lớp màu xanh đen phủ lên */}
+                    <img
+                        src=""
+                        alt={__('welcome.background_alt')}
+                        className="h-full w-full object-cover opacity-30 brightness-[1.08]"
+                    />
+                    <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(11,24,31,0.92),rgba(14,31,41,0.55)_42%,rgba(26,61,75,0.75))]" />
 
-                {/* Giữ lại các lớp nền tĩnh để tạo chiều sâu */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(255,255,255,0.16)_0%,_rgba(255,255,255,0)_70%)] mix-blend-overlay opacity-75" />
-                <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#0B1217] via-[#0B1217]/40 to-transparent" />
-                <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:80px_80px] opacity-20" />
-            </div>
+                    {/* Giữ lại các lớp nền tĩnh để tạo chiều sâu */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle,_rgba(255,255,255,0.16)_0%,_rgba(255,255,255,0)_70%)] mix-blend-overlay opacity-75" />
+                    <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-[#0B1217] via-[#0B1217]/40 to-transparent" />
+                    <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:80px_80px] opacity-20" />
+                </div>
 
                 <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-8">
                     <div className="flex items-center gap-3">
@@ -176,8 +192,6 @@ export default function Welcome() {
                             <Link href="/language/en" className="rounded-md px-3 py-1 text-xs transition hover:bg-white/10">EN</Link>
                             <Link href="/language/ita" className="rounded-md px-3 py-1 text-xs transition hover:bg-white/10">ITA</Link>
                             <Link href="/language/chn" className="rounded-md px-3 py-1 text-xs transition hover:bg-white/10">CHN</Link>
-
-
                         </div>
                         {/* ================================= */}
 
@@ -495,7 +509,8 @@ export default function Welcome() {
                     </div>
                 </footer>
             </div>
-        </>
+        </React.Fragment>
     );
 }
 
+Welcome.layout = (page: React.ReactNode) => page;

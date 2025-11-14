@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+// Import class MenuItem
+use Filament\Navigation\MenuItem; // <-- THÊM DÒNG NÀY
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -17,6 +19,7 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+// Bạn không cần 'NavigationItem' nữa, nên có thể xóa dòng đó đi
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -26,7 +29,22 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            // ->navigationItems(...) // <-- ĐÃ XÓA KHỎI ĐÂY
             ->login()
+            
+            // === THÊM ĐOẠN NÀY VÀO ===
+            ->userMenuItems([
+                MenuItem::make()
+                    ->label('Về Dashboard')
+                    ->url('/dashboard') // Đường dẫn bạn muốn trỏ tới
+                    ->icon('heroicon-o-arrow-left-on-rectangle'), // Icon (thay đổi tùy ý)
+                
+                // Thêm 'logout' nếu bạn muốn giữ lại nút đăng xuất mặc định
+                // Hoặc bạn có thể tùy chỉnh nó:
+                // 'logout' => MenuItem::make()->label('Đăng xuất')
+            ])
+            // =========================
+
             ->colors([
                 'primary' => Color::Amber,
             ])

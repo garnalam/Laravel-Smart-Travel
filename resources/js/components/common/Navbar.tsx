@@ -102,6 +102,12 @@ export function Navbar({ appearance = 'solid' }: NavbarProps) {
                     </a>
                   )}
 
+                  {user.is_admin && (
+                    <a href="http://113.178.51.217:8111/"> {/* <-- Đổi route '/admin' nếu cần */}
+                      {language === 'vi' ? 'Data Platform' : 'Data Platform'}
+                    </a>
+                  )}
+
                   {/* Nút Đăng xuất luôn hiển thị */}
                   <button onClick={handleLogout} className="auth-dropdown__logout">
                     {language === 'vi' ? 'Đăng xuất' : 'Logout'}
