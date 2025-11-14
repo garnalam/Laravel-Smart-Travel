@@ -90,6 +90,7 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
 
   useEffect(() => {
     if (!tourData.departure || !tourData.destination || !tourData.departureDate) return
+    
     const data_outbound = {
       departure_city: tourData.departure,
       arrival_city: tourData.destination,
@@ -100,10 +101,13 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
       arrival_city: tourData.departure,
       departure_date: tourData.arrivalDate,
     }
+    
     console.log('data_outbound:', data_outbound)
     console.log('data_return:', data_return)
+    
     setLoadingOutbound(true)
-    fetch("/api/flight/search", {
+    
+    const fetchOutbound = fetch("/api/flight/search", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -112,36 +116,37 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
       body: JSON.stringify(data_outbound),
     })
       .then(async (response) => {
-        console.log('📡 Response status:', response.status, response.statusText)
+        console.log('📡 Outbound response status:', response.status, response.statusText)
         let json
         try {
           json = await response.json()
         } catch (e) {
-          console.warn('⚠️ Could not parse JSON response')
+          console.warn('⚠️ Could not parse outbound JSON response')
           throw new Error('Invalid JSON response')
         }
-        console.log('🔍 Response JSON:', json)
+        console.log('🔍 Outbound response JSON:', json)
         return json
       })
       .then((data) => {
         if (data.success) {
           const flights = parseFlightsFromApiResponse(data)
           setOutboundFlights(flights)
-          success('Flight search success')
         } else {
-          console.error('❌ Flight search error:', data.error)
-          error(data.error || 'Flight search failed')
+          console.error('❌ Outbound flight search error:', data.error)
+          error(data.error || 'Outbound flight search failed')
         }
       })
       .catch((err) => {
-        console.error('🌩️ Network/Unexpected error fetching flights:', err)
-        error('Network error while searching flights')
+        console.error('🌩️ Network/Unexpected error fetching outbound flights:', err)
+        error('Network error while searching outbound flights')
       })
       .finally(() => setLoadingOutbound(false))
 
     if (!tourData.arrivalDate) return
+    
     setLoadingReturn(true)
-    fetch("/api/flight/search", {
+    
+    const fetchReturn = fetch("/api/flight/search", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -150,32 +155,40 @@ export function FlightBookingSection({ tourData, onBack, onConfirm }: FlightBook
       body: JSON.stringify(data_return),
     })
       .then(async (response) => {
-        console.log('📡 Response status:', response.status, response.statusText)
+        console.log('📡 Return response status:', response.status, response.statusText)
         let json
         try {
           json = await response.json()
         } catch (e) {
-          console.warn('⚠️ Could not parse JSON response')
+          console.warn('⚠️ Could not parse return JSON response')
           throw new Error('Invalid JSON response')
         }
-        console.log('🔍 Response JSON:', json)
+        console.log('🔍 Return response JSON:', json)
         return json
       })
       .then((data) => {
         if (data.success) {
           const flights = parseFlightsFromApiResponse(data)
           setReturnFlights(flights)
-          success('Flight search success')
         } else {
-          console.error('❌ Flight search error:', data.error)
-          error(data.error || 'Flight search failed')
+          console.error('❌ Return flight search error:', data.error)
+          error(data.error || 'Return flight search failed')
         }
       })
       .catch((err) => {
-        console.error('🌩️ Network/Unexpected error fetching flights:', err)
-        error('Network error while searching flights')
+        console.error('🌩️ Network/Unexpected error fetching return flights:', err)
+        error('Network error while searching return flights')
       })
       .finally(() => setLoadingReturn(false))
+
+    // Gọi cả 2 API cùng lúc và hiển thị thông báo khi hoàn thành
+    Promise.all([fetchOutbound, fetchReturn])
+      .then(() => {
+        success('Flight search completed')
+      })
+      .catch(() => {
+        // Errors đã được xử lý trong từng fetch
+      })
   }, [tourData])
 
   const handleSubmit = () => {

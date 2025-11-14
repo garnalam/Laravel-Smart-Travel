@@ -161,8 +161,28 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
   useEffect(() => {
     if (!formData.destination) return
 
+    console.log('🔄 [PreferencesSection] Checking for preferences:', {
+      destination: formData.destination,
+      city_id: formData.city_id,
+      currentDay
+    })
+
     const storedPreferences = getDayPreferences(currentDay)
-    if (storedPreferences?.preferences) {
+    
+    // Check if stored preferences match current destination
+    const storedData = localStorage.getItem('smart_travel_tour_data')
+    let shouldRefetch = false
+    
+    if (storedData) {
+      const parsed = JSON.parse(storedData)
+      if (parsed.destination !== formData.destination || parsed.city_id !== formData.city_id) {
+        console.log('🗑️ [PreferencesSection] Destination changed, force refetch')
+        shouldRefetch = true
+      }
+    }
+
+    if (storedPreferences?.preferences && !shouldRefetch) {
+      console.log('✅ [PreferencesSection] Using cached preferences')
       setCategories((prev) => {
         if (prev.length > 0) return prev
         const rebuilt = rebuildCategoriesFromStorage(storedPreferences.preferences as CategorySection[])
@@ -173,19 +193,27 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
     }
 
     const fetchPlaces = async () => {
+      console.log('🌐 [PreferencesSection] Fetching new places...')
       setIsLoading(true)
       try {
         let cityId = formData.city_id
         if (!cityId && formData.destination) {
+          console.log('🔍 [PreferencesSection] Fetching city_id for destination:', formData.destination)
           const cityResponse = await fetch(`/api/city?search=${encodeURIComponent(formData.destination)}`)
           const cityData = await cityResponse.json()
           if (Array.isArray(cityData) && cityData.length > 0) {
             const exactMatch = cityData.find((c: any) => c.city === formData.destination || c.city_ascii === formData.destination)
             cityId = (exactMatch || cityData[0])._id
+            console.log('✅ [PreferencesSection] Found city_id:', cityId)
             saveTourData({ city_id: cityId })
             setFormData((prev) => ({ ...prev, city_id: cityId }))
           }
         }
+
+        console.log('📡 [PreferencesSection] Calling API with:', {
+          city_id: cityId,
+          destination: formData.destination
+        })
 
         const params = new URLSearchParams({
           city_id: cityId || '',
@@ -198,12 +226,13 @@ export function PreferencesSection({ initialTourData, mode = 'page', onBack }: P
         const data = await response.json()
 
         if (data.success) {
+          console.log('✅ [PreferencesSection] Places loaded successfully')
           const transformed = transformCategoriesFromApi(data.data)
           restorePreferencesFromStorage(transformed, storedPreferences?.preferences)
           setCategories(transformed)
         }
       } catch (err) {
-        console.error('Error fetching tour preferences:', err)
+        console.error('❌ [PreferencesSection] Error fetching tour preferences:', err)
       } finally {
         setIsLoading(false)
       }

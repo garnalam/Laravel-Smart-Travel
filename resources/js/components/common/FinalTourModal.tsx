@@ -130,16 +130,16 @@ export function FinalTourModal({
 
             {/* Day-by-Day Schedule */}
             <div className="space-y-6 mb-8">
-              {schedules.map((schedule) => (
-                <div key={schedule.day} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+              {schedules.map((schedule, dayIndex) => (
+                <div key={dayIndex} className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
                   {/* Day Header */}
                   <div className="flex items-center gap-4 mb-6 pb-4 border-b border-gray-200">
                     <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
-                      <span className="text-white text-2xl font-bold">{schedule.day}</span>
+                      <span className="text-white text-2xl font-bold">{dayIndex + 1}</span>
                     </div>
                     <div className="flex-1">
                       <h3 className="text-2xl font-bold text-gray-900">
-                        {language === 'vi' ? `Ngày ${schedule.day}` : `Day ${schedule.day}`}
+                        {language === 'vi' ? `Ngày ${dayIndex + 1}` : `Day ${dayIndex + 1}`}
                       </h3>
                       <p className="text-gray-600">{schedule.date}</p>
                     </div>

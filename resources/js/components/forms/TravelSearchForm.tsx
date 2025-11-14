@@ -130,6 +130,11 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
   const handleDropdownChange = useCallback((field: keyof DataTour) => (event: any) => {
     if (field === 'destination') {
       const selectedCity = cities.find(city => city.city === event.value)
+      console.log('🔍 [TravelSearchForm] Destination changed:', {
+        newDestination: event.value,
+        selectedCity,
+        city_id: selectedCity?.id
+      })
       setFormData((prev) => ({
         ...prev,
         destination: event.value,
@@ -208,12 +213,39 @@ export function TravelSearchForm({ onShowFlightBooking }: TravelSearchFormProps)
         ...formData,
         departureDate,
         arrivalDate,
+        days: calculateDays(departureDate, arrivalDate),
+        passengers: (formData.adults || 0) + (formData.children || 0)
       }
 
+      console.log('✅ [TravelSearchForm] Submitting data:', {
+        destination: dataToSend.destination,
+        city_id: dataToSend.city_id,
+        departure: dataToSend.departure
+      })
+
+      // Clear old preferences when destination changes
+      const storedData = localStorage.getItem('smart_travel_tour_data')
+      if (storedData) {
+        const parsed = JSON.parse(storedData)
+        if (parsed.destination !== dataToSend.destination || parsed.city_id !== dataToSend.city_id) {
+          console.log('🗑️ [TravelSearchForm] Destination changed, clearing old preferences')
+          // Keep only basic tour data, clear preferences and schedules
+          const cleanedData = {
+            ...dataToSend,
+            lastUpdated: new Date().toISOString(),
+            currentStep: 'flight' as const,
+            // Clear old preferences and schedules
+            dayPreferences: undefined,
+            daySchedules: undefined,
+            preferences: undefined,
+            scheduleData: undefined
+          }
+          localStorage.setItem('smart_travel_tour_data', JSON.stringify(cleanedData))
+        }
+      }
 
       if (onShowFlightBooking) {
         // Use callback instead of routing
-
         onShowFlightBooking(dataToSend)
         success(
           language === 'vi'
